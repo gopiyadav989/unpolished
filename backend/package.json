@@ -1,0 +1,19 @@
+{
+  "name": "unpolished-backend",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy --minify",
+    "cf-typegen": "wrangler types --env-interface CloudflareBindings"
+  },
+  "dependencies": {
+    "@gopiyadav989/unpolished": "^1.0.0",
+    "@prisma/client": "^6.7.0",
+    "@prisma/extension-accelerate": "^1.3.0",
+    "hono": "^4.7.7",
+    "prisma": "^6.6.0",
+    "slugify": "^1.6.6"
+  },
+  "devDependencies": {
+    "wrangler": "^4.4.0"
+  }
+}
