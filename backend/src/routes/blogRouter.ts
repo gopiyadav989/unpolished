@@ -54,12 +54,11 @@ blogRouter.post("/", async (c) => {
         datasourceUrl: c.env.DATABASE_URL,
     }).$extends(withAccelerate());
 
-    
+
 
     try {
 
         const body = await c.req.json();
-        console.log(body);
         const validation = createPostSchema.safeParse(body);
 
         if (!validation.success) {
@@ -79,7 +78,7 @@ blogRouter.post("/", async (c) => {
                 slug,
                 authorId: user.id,
                 publishedAt: published ? new Date() : null
-            }
+            },
         });
 
         return c.json({
@@ -173,7 +172,52 @@ blogRouter.put('/', async (c) => {
     }
 })
 
+
+
 blogRouter.get('/bulk', async (c) => {
+
+    const prisma = new PrismaClient({
+        datasourceUrl: c.env.DATABASE_URL,
+    }).$extends(withAccelerate());
+
+    const user = c.get("user")
+
+    try {
+
+        const blogs = await prisma.blog.findMany({
+
+            orderBy: {
+                updatedAt: 'desc'
+            },
+            include: {
+                author: {
+                    select: {
+                        id: true,
+                        email: true,
+                        username: true,
+                        profileImage: true
+                    }
+                }
+            }
+        })
+
+        return c.json({
+            message: "blogs fetched successfully",
+            blogs
+        }, 200)
+
+    }
+    catch (e) {
+        console.error("Error updating blog:", e);
+        return c.json({ error: "Failed to update the blog" }, 500);
+
+    }
+
+})
+
+
+
+blogRouter.get('/bulkPrivate', async (c) => {
 
     const prisma = new PrismaClient({
         datasourceUrl: c.env.DATABASE_URL,
@@ -206,6 +250,8 @@ blogRouter.get('/bulk', async (c) => {
 
 })
 
+
+
 blogRouter.get('/:slug', async (c) => {
 
     const prisma = new PrismaClient({
@@ -235,8 +281,6 @@ blogRouter.get('/:slug', async (c) => {
         if (!blog) {
             return c.json({ error: "Blog not found" }, 404);
         }
-
-        console.log(blog)
 
         return c.json({
             blog
@@ -275,7 +319,7 @@ blogRouter.delete('/:slug', async (c) => {
 
         // Delete post
         await prisma.blog.delete({
-            where: {slug}
+            where: { slug }
         });
 
         return c.json({

@@ -1,0 +1,1 @@
+export const BACKEND_URL = "https://backend.gopiyadu17.workers.dev/api/v1"

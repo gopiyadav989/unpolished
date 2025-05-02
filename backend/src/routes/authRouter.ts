@@ -18,7 +18,6 @@ authRouter.post('/signup', async (c) => {
     const prisma = new PrismaClient({
         datasourceUrl: c.env.DATABASE_URL,
     }).$extends(withAccelerate());
-    console.log("aa");
 
     try {
 
