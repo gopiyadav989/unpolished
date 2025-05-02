@@ -1,9 +1,9 @@
 import { Hono } from 'hono'
 import { PrismaClient } from '../../prisma/app/generated/prisma/client/edge';
 import { withAccelerate } from '@prisma/extension-accelerate'
-import { sign, verify } from 'hono/jwt'
-import { createMiddleware } from 'hono/factory';
 import { z } from 'zod';
+
+import { authMiddleware } from '../middlewares/autMiddleware';
 
 export const userRouter = new Hono<{
     Bindings: {
@@ -19,41 +19,11 @@ export const userRouter = new Hono<{
     }
 }>();
 
-const jwtPayloadSchema = z.object({
-    id: z.string(),
-    username: z.string(),
-    email: z.string()
-});
-
 const updateProfileSchema = z.object({
     name: z.string().optional(),
     bio: z.string().optional(),
     profileImage: z.string().optional()
 });
-
-const authMiddleware = createMiddleware(async (c, next) => {
-    const authHeader = c.req.header("Authorization") || "";
-
-    try {
-        const payload = await verify(authHeader, c.env.JWT_SECRET);
-        const parsedPaylod = jwtPayloadSchema.parse(payload);
-
-        if (payload) {
-            c.set("user", parsedPaylod)
-            await next();
-        } else {
-            c.status(403);
-            return c.json({
-                message: "You are not logged in"
-            })
-        }
-
-    }
-    catch (e) {
-        console.log(e);
-        return c.json({ error: "Unauthorized: Invalid token" }, 401);
-    }
-})
 
 userRouter.get("/:username", async (c) => {
 

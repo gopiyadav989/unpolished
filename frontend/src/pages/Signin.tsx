@@ -4,12 +4,14 @@ import { SigninInput } from "@gopiyadav989/unpolished";
 import axios from "axios";
 import { BACKEND_URL } from "../config";
 import { Link, useNavigate } from "react-router-dom";
+import { Spinner } from "../components/ui/Spinner";
 
 const SignupPage = () => {
   const [formData, setFormData] = useState<SigninInput>({
     email: "",
     password: "",
   });
+  const [loading, setLoading] = useState(false);
 
   function handleChange(e: ChangeEvent<HTMLInputElement>) {
     const { name, value } = e.target;
@@ -23,13 +25,17 @@ const SignupPage = () => {
   
   async function handleSubmit() {
     try {
+      setLoading(true);
       const res = await axios.post(`${BACKEND_URL}/auth/signin`, formData);
       const token = res.data.token;
       localStorage.setItem("token", token);
-      navigate("/blogs");
+      navigate("/");
     }
     catch (e) {
       alert("alert while signing up");
+    }
+    finally{
+      setLoading(false);
     }
   }
 
@@ -76,9 +82,9 @@ const SignupPage = () => {
 
           <button
             onClick={handleSubmit}
-            className="w-full py-2 px-4 bg-black text-white rounded-lg shadow-md hover:bg-gray-800 transition-colors"
+            className="w-full py-2 px-4 bg-black text-white rounded-lg shadow-md hover:bg-gray-800 transition-colors text-center flex items-center justify-center gap-2"
           >
-            Signin
+            {!loading ? 'Singin' : <> <Spinner/> <span>Loading...</span> </>}
           </button>
 
           <p className="text-sm text-center text-gray-700">

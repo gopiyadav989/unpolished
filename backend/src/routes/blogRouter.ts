@@ -6,6 +6,8 @@ import { z } from 'zod';
 import slugify from 'slugify';
 import { createPostSchema, updatePostSchema } from '@gopiyadav989/unpolished';
 
+import { authMiddleware, semiAuthMiddleware } from '../middlewares/autMiddleware';
+
 export const blogRouter = new Hono<{
     Bindings: {
         DATABASE_URL: string;
@@ -22,31 +24,7 @@ export const jwtPayloadSchema = z.object({
     email: z.string()
 });
 
-blogRouter.use("/*", async (c, next) => {
-    const authHeader = c.req.header("Authorization") || "";
-
-    try {
-        const payload = await verify(authHeader, c.env.JWT_SECRET);
-        const parsedPaylod = jwtPayloadSchema.parse(payload);
-
-        if (payload) {
-            c.set("user", parsedPaylod)
-            await next();
-        } else {
-            c.status(403);
-            return c.json({
-                message: "You are not logged in"
-            })
-        }
-
-    }
-    catch (e) {
-        console.log(e);
-        return c.json({ error: "Unauthorized: Invalid token" }, 401);
-    }
-});
-
-blogRouter.post("/", async (c) => {
+blogRouter.post("/", authMiddleware, async (c) => {
 
     const user = c.get("user");
 
@@ -95,18 +73,13 @@ blogRouter.post("/", async (c) => {
     }
 })
 
-blogRouter.put('/', async (c) => {
+blogRouter.put('/', authMiddleware, async (c) => {
 
     const prisma = new PrismaClient({
         datasourceUrl: c.env.DATABASE_URL,
     }).$extends(withAccelerate());
 
-    const data = await c.req.json();
     const user = c.get("user");
-
-    if (!data || !data.id) {
-        return c.json({ error: "Blog ID and data are required" }, 400);
-    }
 
     try {
 
@@ -131,21 +104,10 @@ blogRouter.put('/', async (c) => {
             return c.json({ error: "Blog not found or you don't have permission to edit it" }, 404);
         }
 
-        const updateData = {
-            ...existingBlog,  // Existing blog data
-            ...data,          // New data to update (overwrites fields)
-            updatedAt: new Date(),  // Set the updated timestamp
-        };
-
-        if (!existingBlog) {
-            return c.json({ error: "Blog not found" }, 404);
-        }
-
         let publishedAt = existingBlog.publishedAt;
         if (data.published === true && !existingBlog.published) {
             publishedAt = new Date();
         }
-
 
         const updatedBlog = await prisma.blog.update({
             where: {
@@ -217,7 +179,7 @@ blogRouter.get('/bulk', async (c) => {
 
 
 
-blogRouter.get('/bulkPrivate', async (c) => {
+blogRouter.get('/bulkPrivate', authMiddleware, async (c) => {
 
     const prisma = new PrismaClient({
         datasourceUrl: c.env.DATABASE_URL,
@@ -252,13 +214,14 @@ blogRouter.get('/bulkPrivate', async (c) => {
 
 
 
-blogRouter.get('/:slug', async (c) => {
+blogRouter.get('/:slug', semiAuthMiddleware, async (c) => {
 
     const prisma = new PrismaClient({
         datasourceUrl: c.env.DATABASE_URL,
     }).$extends(withAccelerate());
 
     const slug = c.req.param('slug');
+    const currentUser = c.get("user");
 
     try {
 
@@ -278,13 +241,17 @@ blogRouter.get('/:slug', async (c) => {
             }
         });
 
-        if (!blog) {
+
+        if (!blog || (!blog.published && (!currentUser || currentUser.id !== blog.authorId)) ) {
             return c.json({ error: "Blog not found" }, 404);
         }
 
+        const isAuthor = currentUser && currentUser.id === blog.authorId;
+
         return c.json({
-            blog
-        }, 200)
+            blog,
+            isAuthor
+          }, 200);
 
     }
     catch (e) {
@@ -295,7 +262,7 @@ blogRouter.get('/:slug', async (c) => {
     }
 })
 
-blogRouter.delete('/:slug', async (c) => {
+blogRouter.delete('/:slug', authMiddleware, async (c) => {
 
     const prisma = new PrismaClient({
         datasourceUrl: c.env.DATABASE_URL,

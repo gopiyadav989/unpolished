@@ -45,7 +45,7 @@ export function Header() {
 				{/* User actions */}
 				<div className="flex items-center gap-4">
 					<Link
-						to="/i-still-miss"
+						to="/i-still-miss-her"
 						className="flex items-center gap-1 px-3 py-1.5 text-sm rounded-full border border-gray-300 hover:bg-gray-50 transition-colors"
 					>
 						<PencilLine size={16} />
