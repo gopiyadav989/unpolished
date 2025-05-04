@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Search, BookOpen } from 'lucide-react';
+import { Search, BookOpen, ChevronRight, ChevronLeft } from 'lucide-react';
 import BlogCard from './BlogCard';
 import axios from 'axios';
 import { BACKEND_URL } from '../config';
 import { InterestBar } from './InterestBar';
 import cacheService from '../cacheService';
+import { ToastContainer } from './ui/Toast';
 
 interface Blog {
   id: string;
@@ -28,6 +29,15 @@ interface BlogFeedProps {
   initialBlogs?: Blog[];
 }
 
+interface PaginationData {
+  page: number;
+  limit: number;
+  totalCount: number;
+  totalPages: number;
+  hasNext: boolean;
+  hasPrev: boolean;
+}
+
 
 
 
@@ -36,34 +46,47 @@ export function BlogFeed({ initialBlogs = [] }: BlogFeedProps) {
   const [isLoading, setIsLoading] = useState(!initialBlogs.length);
   const [currentInterest, setCurrentInterest] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
+  const [pagination, setPagination] = useState<PaginationData>({
+    page: 1,
+    limit: 10,
+    totalCount: 0,
+    totalPages: 0,
+    hasNext: false,
+    hasPrev: false
+  });
 
 
   // get blogs from backend
-  const fetchBlogsForInterest = useCallback(async (interest: string) => {
+  const fetchBlogsForInterest = useCallback(async (interest: string, page = 1) => {
     try {
       setIsLoading(true);
       setError(null);
 
-      const token = typeof window !== 'undefined' ? localStorage.getItem("token") : null;
+      const token = localStorage.getItem("token");
 
       const res = await axios.get(`${BACKEND_URL}/blog/bulk`, {
-        params: { interest: interest !== 'For You' ? interest : undefined },
+        params: {
+          interest: interest !== 'For You' ? interest : undefined,
+          page,
+          limit: pagination.limit
+        },
         headers: token ? { Authorization: token } : {}
       });
 
       const data = res.data;
 
-      if (data.blogs) {
-        await cacheService.cacheBlogs(interest, data.blogs);
+      if (data.blogs && data.pagination) {
+        await cacheService.cacheBlogs(interest, data.blogs, data.pagination);
         setBlogs(data.blogs);
+        setPagination(data.pagination);
       }
     } catch (e) {
-      console.error(`Error fetching blogs for interest ${interest}:`, e);
-      setError('Failed to load articles. Please try again later.');
+      console.error(`error fetching blogs for ${interest}:`, e);
+      window.toast.error("Failed to load articles. Please try again later.");
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [pagination.limit]);
 
 
   // get blogs from db store
@@ -73,13 +96,14 @@ export function BlogFeed({ initialBlogs = [] }: BlogFeedProps) {
     try {
       setIsLoading(true);
 
-      const cachedBlogs = await cacheService.getCachedBlogs(interest);
+      const cachedBlogs = await cacheService.getCachedBlogs(interest, 1);
 
       if (cachedBlogs) {
-        setBlogs(cachedBlogs);
+        setBlogs(cachedBlogs.blogs);
+        setPagination(cachedBlogs.pagination);
         setIsLoading(false);
       } else {
-        await fetchBlogsForInterest(interest);
+        await fetchBlogsForInterest(interest, 1);
       }
     } catch (e) {
       console.error(`Error handling interest change to ${interest}:`, e);
@@ -89,17 +113,47 @@ export function BlogFeed({ initialBlogs = [] }: BlogFeedProps) {
   }, [fetchBlogsForInterest]);
 
 
+  //page change
+  const handlePageChange = useCallback(async (newPage: number) => {
+    if (newPage === pagination.page) return;
 
+    try {
+      setIsLoading(true);
+      const cachedData = await cacheService.getCachedBlogs(currentInterest, newPage);
+
+      if (cachedData && cachedData.blogs) {
+        setBlogs(cachedData.blogs);
+        setPagination(cachedData.pagination);
+        setIsLoading(false);
+      }
+      else {
+        await fetchBlogsForInterest(currentInterest, newPage);
+      }
+
+      setTimeout(() => {
+        window.scrollTo({
+          top: 0,
+          behavior: 'smooth'
+        });
+      }, 50);
+    }
+    catch (e) {
+      console.error(`error in changing to ${newPage}: `, e);
+      window.toast.error("failed to load more blogs");
+      setIsLoading(false);
+    }
+
+  }, [currentInterest, pagination.page])
 
 
   // Retry loading blogs
   const handleRetry = useCallback(() => {
     if (currentInterest) {
-      fetchBlogsForInterest(currentInterest);
+      fetchBlogsForInterest(currentInterest, pagination.page);
     } else {
       handleInterestChange('For You');
     }
-  }, [currentInterest]);
+  }, [currentInterest, pagination.page]);
 
 
 
@@ -167,6 +221,55 @@ export function BlogFeed({ initialBlogs = [] }: BlogFeedProps) {
               commentCount={Math.floor(Math.random() * 20)} // Mock data
             />
           ))}
+
+          {/* Pagination Controls */}
+          {pagination.totalPages > 1 && (
+            <div className="flex justify-center items-center mt-8 gap-2">
+              <button
+                onClick={() => handlePageChange(pagination.page - 1)}
+                disabled={!pagination.hasPrev}
+                className={`p-2 rounded-full ${pagination.hasPrev? 'bg-gray-200 hover:bg-gray-300 text-gray-700': 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}
+                aria-label="Previous page"
+              >
+                <ChevronLeft size={20} />
+              </button>
+
+              <div className="flex items-center gap-1">
+                {Array.from({ length: pagination.totalPages }, (_, i) => i + 1)
+                  .filter(pageNum => {
+                    const currentPage = pagination.page;
+                    return ( pageNum === 1 || pageNum === pagination.totalPages ||Math.abs(pageNum - currentPage) <= 1);
+                  })
+                  .map((pageNum, index, array) => {
+                    const previousPage = index > 0 ? array[index - 1] : null;
+                    const showEllipsis = previousPage && pageNum - previousPage > 1;
+
+                    return (
+                      <div key={pageNum} className="flex items-center">
+                        {showEllipsis && (
+                          <span className="px-2 text-gray-500">...</span>
+                        )}
+                        <button
+                          onClick={() => handlePageChange(pageNum)}
+                          className={`w-8 h-8 flex items-center justify-center rounded-full ${pageNum === pagination.page? 'bg-black text-white': 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                        >
+                          {pageNum}
+                        </button>
+                      </div>
+                    );
+                  })}
+              </div>
+
+              <button
+                onClick={() => handlePageChange(pagination.page + 1)}
+                disabled={!pagination.hasNext}
+                className={`p-2 rounded-full ${pagination.hasNext ? 'bg-gray-200 hover:bg-gray-300 text-gray-700': 'bg-gray-100 text-gray-400 cursor-not-allowed'}`} aria-label="Next page"
+              >
+                <ChevronRight size={20} />
+              </button>
+            </div>
+          )}
+
         </div>
       ) : (
         <div className="text-center py-12">
@@ -179,6 +282,8 @@ export function BlogFeed({ initialBlogs = [] }: BlogFeedProps) {
           </p>
         </div>
       )}
+
+      <ToastContainer />
     </div>
   );
 }

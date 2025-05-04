@@ -20,12 +20,26 @@ export interface Blog {
 }
 
 
+export interface PaginationData {
+    page: number;
+    limit: number;
+    totalCount: number;
+    totalPages: number;
+    hasNext: boolean;
+    hasPrev: boolean;
+}
 
+interface CachedPage {
+    blogs: Blog[];
+    pagination: PaginationData;
+    lastFetched: number;
+}
 
 interface CachedInterest {
     interest: string;
-    blogs: Blog[];
-    lastFetched: number;
+    pages: {
+        [pageNumber: number]: CachedPage;
+    };
 }
 
 interface ActiveInterest {
@@ -98,50 +112,98 @@ class BlogCacheService {
         });
     }
 
-    // Store blogs for a specific interest
-    async cacheBlogs(interest: string, blogs: Blog[]): Promise<void> {
+
+
+
+    async cacheBlogs(interest: string, blogs: Blog[], pagination: PaginationData | undefined): Promise<void> {
         try {
             await this.init();
             if (!this.db) return;
 
-            const cachedInterest: CachedInterest = {
-                interest,
-                blogs,
-                lastFetched: Date.now(),
-            };
+            if (!pagination) {
+                console.error("Pagination data is undefined");
+                return;
+            }    
 
             const tx = this.db.transaction('cachedInterests', 'readwrite');
-            await tx.store.put(cachedInterest);
+            const store = tx.store;
+
+            const existingData = await store.get(interest);
+
+            const updatedPage : CachedPage =  {
+                blogs,
+                pagination,
+                lastFetched: Date.now()
+            }
+
+            const cachedInterest: CachedInterest = {
+                interest,
+                pages: {
+                    ...existingData?.pages,
+                    [pagination.page]: updatedPage
+                }
+            };
+
+            await store.put(cachedInterest);
             await tx.done;
         } catch (error) {
             console.error(`Failed to cache blogs for interest '${interest}':`, error);
         }
     }
 
-
-
-
-    // Get cached blogs for a specific interest if fresh
-    async getCachedBlogs(interest: string): Promise<Blog[] | null> {
+    async getCachedBlogs(interest: string, page: number): Promise<{ blogs: Blog[], pagination: PaginationData } | null> {
         try {
             await this.init();
             if (!this.db) return null;
 
             const cachedInterest = await this.db.get('cachedInterests', interest);
-            if (!cachedInterest) return null;
 
-            const now = Date.now();
-            if (now - cachedInterest.lastFetched > this.CACHE_EXPIRY) {
+            const pageData = cachedInterest?.pages?.[page];
+            if (!pageData) return null;
+
+            if (Date.now() - pageData.lastFetched > this.CACHE_EXPIRY) {
                 return null;
             }
 
-            return cachedInterest.blogs;
-        } catch (error) {
-            console.error(`Failed to get cached blogs for interest '${interest}':`, error);
+            return {
+                blogs: pageData.blogs,
+                pagination: pageData.pagination
+            }
+        }
+        catch (e) {
+            console.error(`Failed to get cached blogs for interest '${interest}':`, e);
             return null;
         }
     }
 
+    async clearCache(): Promise<void> {
+        try {
+            await this.init();
+            if (!this.db) return;
+
+            const tx = this.db.transaction('cachedInterests', 'readwrite');
+            await tx.store.clear();
+            await tx.done;
+        } catch (error) {
+            console.error('Failed to clear cache:', error);
+        }
+    }
+
+    // Check if cache for an interest needs refresh
+    async shouldRefreshCache(interest: string, page: number = 1): Promise<boolean> {
+        try {
+            await this.init();
+            if (!this.db) return true;
+
+            const cachedInterest = await this.db.get('cachedInterests', interest);
+            if (!cachedInterest) return true;
+
+            return Date.now() - cachedInterest.pages[page].lastFetched > this.CACHE_EXPIRY;
+        } catch (error) {
+            console.error(`Failed to check refresh need for interest '${interest}':`, error);
+            return true;
+        }
+    }
 
 
     // Set the active interest
@@ -159,9 +221,6 @@ class BlogCacheService {
         }
     }
 
-
-
-
     // Get the active interest
     async getActiveInterest(): Promise<string | null> {
         try {
@@ -173,42 +232,6 @@ class BlogCacheService {
         } catch (error) {
             console.error('Failed to get active interest:', error);
             return null;
-        }
-    }
-
-
-
-    // Clear .all cached interests
-    async clearCache(): Promise<void> {
-        try {
-            await this.init();
-            if (!this.db) return;
-
-            const tx = this.db.transaction('cachedInterests', 'readwrite');
-            await tx.store.clear();
-            await tx.done;
-        } catch (error) {
-            console.error('Failed to clear cache:', error);
-        }
-    }
-
-
-
-
-
-    // Check if cache for an interest needs refresh
-    async shouldRefreshCache(interest: string): Promise<boolean> {
-        try {
-            await this.init();
-            if (!this.db) return true;
-
-            const cachedInterest = await this.db.get('cachedInterests', interest);
-            if (!cachedInterest) return true;
-
-            return Date.now() - cachedInterest.lastFetched > this.CACHE_EXPIRY;
-        } catch (error) {
-            console.error(`Failed to check refresh need for interest '${interest}':`, error);
-            return true;
         }
     }
 
@@ -228,7 +251,7 @@ class BlogCacheService {
 
         }
         catch (e) {
-            console.log("failed to cache recenlty edited blog", e);
+            console.log("failed to cache recetly edited blog", e);
         }
     }
 
@@ -276,20 +299,16 @@ class BlogCacheService {
         }
     }
 
-    async getRecentlyOpenedBlog(slug: string): Promise<Blog| null> {
+    async getRecentlyOpenedBlog(slug: string): Promise<Blog | null> {
         try {
             await this.init();
             if (!this.db) return null;
 
-
-
             const recentlyOpenedBlog = await this.db.get('recentlyOpened', slug);
             return recentlyOpenedBlog ? recentlyOpenedBlog.blog : null;
 
-            
-
         }
-        catch(e) {
+        catch (e) {
             console.error('Failed to get recently opened blogs:', e);
             return null;
         }

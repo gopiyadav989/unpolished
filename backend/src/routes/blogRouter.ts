@@ -23,6 +23,11 @@ export const jwtPayloadSchema = z.object({
     email: z.string()
 });
 
+const paginationSchema = z.object({
+    page: z.coerce.number().int().positive().default(1),
+    limit: z.coerce.number().int().positive().max(100).default(10)
+});
+
 
 
 blogRouter.post("/", authMiddleware, async (c) => {
@@ -161,30 +166,59 @@ blogRouter.get('/bulk', async (c) => {
         datasourceUrl: c.env.DATABASE_URL,
     }).$extends(withAccelerate());
 
-    const user = c.get("user")
-
     try {
 
-        const blogs = await prisma.blog.findMany({
+        const query = c.req.query();
+        const { page, limit } = paginationSchema.parse({
+            page: query.page,
+            limit: query.limit
+        })
 
-            orderBy: {
-                updatedAt: 'desc'
-            },
-            include: {
-                author: {
-                    select: {
-                        id: true,
-                        email: true,
-                        username: true,
-                        profileImage: true
+        const skip = (page - 1) * limit;
+
+        const [totalCount, blogs] = await Promise.all([
+            prisma.blog.count({
+                where: {
+                    published: true
+                }
+            }),
+            prisma.blog.findMany({
+                where: {
+                    published: true
+                },
+                skip,
+                take: limit,
+                orderBy: {
+                    updatedAt: 'desc'
+                },
+                include: {
+                    author: {
+                        select: {
+                            id: true,
+                            username: true,
+                            profileImage: true
+                        }
                     }
                 }
-            }
-        })
+            })
+        ])
+
+
+        const totalPages = Math.ceil(totalCount / limit);
+        const hasNext = page < totalPages;
+        const hasPrev = page > 1;
 
         return c.json({
             message: "blogs fetched successfully",
-            blogs
+            blogs,
+            pagination: {
+                page,
+                limit,
+                totalCount,
+                totalPages,
+                hasNext,
+                hasPrev
+            }
         }, 200)
 
     }
@@ -208,18 +242,56 @@ blogRouter.get('/bulkPrivate', authMiddleware, async (c) => {
 
     try {
 
-        const blogs = await prisma.blog.findMany({
-            where: {
-                authorId: user.id
-            },
-            orderBy: {
-                updatedAt: 'desc'
-            }
-        })
+        const query = c.req.query();
+        const { page, limit } = paginationSchema.parse({
+            page: query.page,
+            limit: query.limit
+        });
+
+        const skip = (page - 1) * limit;
+
+        const [totalCount, blogs] = await Promise.all([
+            prisma.blog.count({
+                where: {
+                    authorId: user.id
+                }
+            }),
+            prisma.blog.findMany({
+                where: {
+                    authorId: user.id
+                },
+                skip,
+                take: limit,
+                orderBy: {
+                    updatedAt: 'desc'
+                },
+                include: {
+                    author: {
+                        select: {
+                            id: true,
+                            username: true,
+                            profileImage: true
+                        }
+                    }
+                }
+            })
+        ]);
+
+        const totalPages = Math.ceil(totalCount / limit);
+        const hasNext = page < totalPages;
+        const hasPrev = page > 1;
 
         return c.json({
             message: "blogs fetched successfully",
-            blogs
+            blogs,
+            pagination: {
+                page,
+                limit,
+                totalCount,
+                totalPages,
+                hasNext,
+                hasPrev
+            }
         }, 200)
 
     }
@@ -240,7 +312,7 @@ blogRouter.get('/:slug', semiAuthMiddleware, async (c) => {
     }).$extends(withAccelerate());
 
     const slug = c.req.param('slug');
-    const currentUser = c.get("user");
+    const user = c.get("user");
 
     try {
 
@@ -260,16 +332,16 @@ blogRouter.get('/:slug', semiAuthMiddleware, async (c) => {
             }
         });
 
-        if (!blog || (!blog.published && (!currentUser || currentUser.id !== blog.authorId)) ) {
-            return c.json({ error: "Blog not found" }, 404);
+        if (!blog) {
+            return c.json({ error: "Not found" }, 404);
         }
-
-        const isAuthor = currentUser && currentUser.id === blog.authorId;
+        if (!blog.published && (!user || user.id !== blog.authorId)) {
+            return c.json({ error: "Forbidden" }, 403);
+        }
 
         return c.json({
             blog,
-            isAuthor
-          }, 200);
+        }, 200);
 
     }
     catch (e) {

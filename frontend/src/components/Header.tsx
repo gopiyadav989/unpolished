@@ -1,6 +1,7 @@
-import { LogOut, PencilLine, Search, Settings, User } from "lucide-react";
+import { LogOut, PencilLine, Search, User } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
+import cacheService from "../cacheService";
 
 
 export function Header() {
@@ -16,7 +17,7 @@ export function Header() {
 	useEffect(() => {
 		setImageUrl(localStorage.getItem('profileImage'))
 		setUserId(localStorage.getItem('userId'))
-	}, [])
+	}, [imageUrl])
 
 
 	useEffect(() => {
@@ -45,6 +46,10 @@ export function Header() {
 
 	const handleSignout = () => {
 		localStorage.clear();
+		cacheService.clearCache();
+		setImageUrl(null);
+		localStorage.removeItem('token');
+		window.dispatchEvent(new Event('logout'));
 		setShowUserMenu(false);
 	}
 
@@ -53,7 +58,7 @@ export function Header() {
 			{/* logo bar */}
 			<div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
 				<div className="flex items-center justify-between">
-					<h1 className="text-3xl font-bold mr-8">U.</h1>
+					<Link to={"/"} className="text-3xl font-bold mr-8">U.</Link>
 
 					{/* Search bar */}
 					<div className="hidden md:block w-64 lg:w-80">
@@ -89,10 +94,10 @@ export function Header() {
 									<User size={16} />
 									Profile
 								</Link>
-								<Link to="/settings" className={"flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"}>
+								{/* <Link to="/settings" className={"flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"}>
 									<Settings size={16} />
 									Settings
-								</Link>
+								</Link> */}
 								{userId ? (
 									<button onClick={handleSignout} className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
 										<LogOut size={16} />

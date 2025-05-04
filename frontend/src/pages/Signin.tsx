@@ -52,12 +52,12 @@ const SigninPage = () => {
             <p className="text-xs uppercase tracking-widest text-gray-400">Unpolished.</p>
           </div>
 
-          <div className="space-y-4">
+          {/* <div className="space-y-4">
             <p className="text-sm font-light italic">
               "Words have the power to both destroy and heal. When words are both true and kind, they can change our world."
             </p>
             <p className="text-xs text-gray-400">— Buddha</p>
-          </div>
+          </div> */}
         </div>
 
         {/* Right Panel */}
@@ -103,7 +103,7 @@ const SigninPage = () => {
               {!loading ? 'Sign In' : <> <Spinner /> <span className="ml-2">Processing...</span> </>}
             </button>
 
-            <div className="flex items-center text-xs text-gray-500 my-2">
+            {/* <div className="flex items-center text-xs text-gray-500 my-2">
               <hr className="flex-grow border-gray-200" />
               <span className="px-2">or</span>
               <hr className="flex-grow border-gray-200" />
@@ -120,7 +120,7 @@ const SigninPage = () => {
                 <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
               </svg>
               Continue with Google
-            </button>
+            </button> */}
           </div>
 
           <p className="text-xs text-center text-gray-500 mt-4">
