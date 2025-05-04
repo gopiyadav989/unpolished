@@ -19,30 +19,57 @@ export interface Blog {
     };
 }
 
-// CachedInterest record stored per interest
+
+
+
 interface CachedInterest {
     interest: string;
     blogs: Blog[];
     lastFetched: number;
 }
 
-// Active interest record
 interface ActiveInterest {
     id: 'current';
     interest: string;
 }
 
-// IndexedDB schema definition
+interface RecentlyEdited {
+    slug: string,
+    blog: Blog
+}
+
+interface RecentlyOpened {
+    slug: string,
+    blog: Blog,
+    accessedAt: Date;
+}
+
+
+
+
+// IndexedDB schema 
 interface BlogCacheDB extends DBSchema {
     cachedInterests: {
         key: string; // interest name
         value: CachedInterest;
     };
     activeInterest: {
-        key: string; // always 'current'
+        key: string; // -> 'current'
         value: ActiveInterest;
     };
+    recentlyEdited: {
+        key: string;  // -> 'i-still-miss-her'
+        value: RecentlyEdited;
+    };
+    recentlyOpened: {
+        key: string,
+        value: RecentlyOpened
+    }
+
+
 }
+
+
 
 class BlogCacheService {
     private db: IDBPDatabase<BlogCacheDB> | null = null;
@@ -60,6 +87,12 @@ class BlogCacheService {
                 }
                 if (!db.objectStoreNames.contains('activeInterest')) {
                     db.createObjectStore('activeInterest', { keyPath: 'id' });
+                }
+                if (!db.objectStoreNames.contains('recentlyEdited')) {
+                    db.createObjectStore('recentlyEdited', { keyPath: 'slug' });
+                }
+                if (!db.objectStoreNames.contains('recentlyOpened')) {
+                    db.createObjectStore('recentlyOpened', { keyPath: 'slug' })
                 }
             },
         });
@@ -145,7 +178,7 @@ class BlogCacheService {
 
 
 
-    // Clear all cached interests
+    // Clear .all cached interests
     async clearCache(): Promise<void> {
         try {
             await this.init();
@@ -180,6 +213,87 @@ class BlogCacheService {
     }
 
 
+    async cacheRecentlyEditedBlog(blog: Blog): Promise<void> {
+        try {
+
+            await this.init();
+            if (!this.db) return;
+
+            if (blog.slug == "i-still-miss-her") {
+                const tx = this.db.transaction('recentlyEdited', 'readwrite');
+                const recentlyEditedBlog: RecentlyEdited = { slug: "i-still-miss-her", blog };
+                await tx.store.put(recentlyEditedBlog);
+                await tx.done;
+            }
+
+        }
+        catch (e) {
+            console.log("failed to cache recenlty edited blog", e);
+        }
+    }
+
+    async getRecentlyEditedBlog(): Promise<Blog | null> {
+        try {
+            await this.init();
+            if (!this.db) return null;
+
+            const recenltyEditedBlog = await this.db.get('recentlyEdited', 'i-still-miss-her');
+            return recenltyEditedBlog ? recenltyEditedBlog.blog : null;
+        }
+        catch (e) {
+            console.log("failed to get recently cached data: ", e);
+            return null;
+        }
+    }
+
+
+
+    async cacheRecentlyOpenedBlog(blog: Blog): Promise<void> {
+        try {
+
+            await this.init();
+            if (!this.db) return;
+
+            const tx = this.db.transaction('recentlyOpened', 'readwrite');
+            const store = tx.store;
+
+            const allEntries = await store.getAll();
+            const filtered = allEntries.filter(entry => entry.slug !== blog.slug);
+            filtered.unshift({ blog, accessedAt: new Date(), slug: blog.slug });
+
+            const topFive = filtered.slice(0, 5);
+
+
+            await store.clear();
+            await Promise.all(
+                topFive.map(entry => store.put(entry))
+            )
+            await tx.done;
+
+        }
+        catch (e) {
+            console.log("failed to cache recenlty opene blog", e);
+        }
+    }
+
+    async getRecentlyOpenedBlog(slug: string): Promise<Blog| null> {
+        try {
+            await this.init();
+            if (!this.db) return null;
+
+
+
+            const recentlyOpenedBlog = await this.db.get('recentlyOpened', slug);
+            return recentlyOpenedBlog ? recentlyOpenedBlog.blog : null;
+
+            
+
+        }
+        catch(e) {
+            console.error('Failed to get recently opened blogs:', e);
+            return null;
+        }
+    }
 
 
 

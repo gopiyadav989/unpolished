@@ -1,5 +1,4 @@
 import { useState, ChangeEvent } from "react";
-import { motion } from "framer-motion";
 import { SignupInput } from "@gopiyadav989/unpolished";
 import axios from "axios";
 import { BACKEND_URL } from "../config";
@@ -21,7 +20,7 @@ const SignupPage = () => {
       ...formData,
       [name]: value
     });
-  };
+  }
 
   const navigate = useNavigate();
 
@@ -31,171 +30,125 @@ const SignupPage = () => {
       const res = await axios.post(`${BACKEND_URL}/auth/signup`, formData);
       const token = res.data.token;
       localStorage.setItem("token", token);
+      localStorage.setItem('userId', res.data.user.id);
+      localStorage.setItem('username', res.data.user.username);
+      localStorage.setItem('profileImage', res.data.user.profileImage);
       navigate("/");
     }
     catch (e) {
-      alert("alert while signing up");
+      alert("Error while signing up");
     }
-    finally{
+    finally {
       setLoading(false);
     }
   }
 
-
   return (
-    <div className="min-h-screen grid grid-cols-1 md:grid-cols-2 font-serif bg-gray-50 text-gray-900">
-      {/* Left Side: Signup Form */}
-      <div className="flex flex-col justify-center items-center p-8">
-        {/* Logo / Brand Name - Elegant & Minimal */}
-        <h1 className="text-4xl font-bold mb-6">U.</h1>
-
-        {/* Google Login Button - Refined */}
-        <button type="button" className="flex items-center justify-center w-full max-w-sm border border-gray-800 text-gray-800 bg-white hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-600 focus:border-gray-600 py-2 px-4 rounded-lg mb-4 transition">
-          <span>Continue with Google</span>
-        </button>
-
-        {/* OR Divider - Clean & Simple */}
-        <div className="flex items-center justify-center text-sm text-gray-500 mb-4 w-full max-w-sm">
-          <hr className="border-t border-gray-300 flex-grow" />
-          <span className="px-2">OR</span>
-          <hr className="border-t border-gray-300 flex-grow" />
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4 py-12 font-serif">
+      <div className="w-full max-w-3xl flex overflow-hidden rounded-2xl shadow-xl">
+        {/* Left Panel */}
+        <div className="w-2/5 bg-black text-white p-8 flex flex-col justify-between">
+          <div>
+            <h1 className="text-4xl font-bold mb-1">U.</h1>
+            <div className="h-px w-8 bg-gray-500 my-3"></div>
+            <p className="text-xs uppercase tracking-widest text-gray-400">Unpolished</p>
+          </div>
+          
+          <div className="space-y-4">
+            <p className="text-sm font-light italic">
+            "The more that you read, the more things you will know. The more that you learn, the more places you'll go."
+            </p>
+            <p className="text-xs text-gray-400">— Dr. Seuss</p>
+          </div>
         </div>
-
-        {/* Signup Form - Elegant & Contained */}
-        <div className="w-full max-w-sm space-y-4">
-          <input
-            type="text"
-            name="name"
-            placeholder="Name"
-            value={formData.name}
-            onChange={handleChange}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-gray-600 focus:border-gray-600 transition"
-          />
-          <input
-            type="email"
-            name="email"
-            placeholder="Email"
-            value={formData.email}
-            onChange={handleChange}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-gray-600 focus:border-gray-600 transition"
-          />
-
-          <input
-            type="text"
-            name="username"
-            placeholder="Username"
-            value={formData.username}
-            onChange={handleChange}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-gray-600 focus:border-gray-600 transition"
-          />
-
-          <input
-            type="password"
-            name="password"
-            placeholder="Password"
-            value={formData.password}
-            onChange={handleChange}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-gray-600 focus:border-gray-600 transition"
-          />
-
-          <button
-            onClick={handleSubmit}
-            className="w-full py-2 px-4 bg-black text-white rounded-lg shadow-md hover:bg-gray-800 transition-colors text-center flex items-center justify-center gap-2"
-          >
-            {!loading ? 'Singup' : <> <Spinner /> <span>Loading...</span> </>}
-          </button>
-
-          <p className="text-sm text-center text-gray-700">
-            Already have an account? <Link to={"/signin"} className="underline">Signin</Link>
+        
+        {/* Right Panel */}
+        <div className="w-3/5 bg-white p-8">
+          <div className="mb-6">
+            <h2 className="text-xl font-semibold mb-1">Create Account</h2>
+            <p className="text-gray-500 text-sm">Join our exclusive community</p>
+          </div>
+          
+          <div className="space-y-5">
+            <div>
+              <label htmlFor="name" className="block text-xs font-medium text-gray-700 mb-1 uppercase tracking-wider">Name</label>
+              <input
+                id="name"
+                type="text"
+                name="name"
+                value={formData.name}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-200 rounded focus:outline-none focus:border-black text-sm"
+              />
+            </div>
+            
+            <div>
+              <label htmlFor="username" className="block text-xs font-medium text-gray-700 mb-1 uppercase tracking-wider">Username</label>
+              <input
+                id="username"
+                type="text"
+                name="username"
+                value={formData.username}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-200 rounded focus:outline-none focus:border-black text-sm"
+              />
+            </div>
+            
+            <div>
+              <label htmlFor="email" className="block text-xs font-medium text-gray-700 mb-1 uppercase tracking-wider">Email</label>
+              <input
+                id="email"
+                type="email"
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-200 rounded focus:outline-none focus:border-black text-sm"
+              />
+            </div>
+            
+            <div>
+              <label htmlFor="password" className="block text-xs font-medium text-gray-700 mb-1 uppercase tracking-wider">Password</label>
+              <input
+                id="password"
+                type="password"
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-200 rounded focus:outline-none focus:border-black text-sm"
+              />
+            </div>
+            
+            <button
+              onClick={handleSubmit}
+              className="w-full py-2 bg-black text-white text-sm font-medium rounded hover:bg-gray-900 transition-colors flex items-center justify-center"
+            >
+              {!loading ? 'Register' : <> <Spinner /> <span className="ml-2">Processing...</span> </>}
+            </button>
+            
+            <div className="flex items-center text-xs text-gray-500 my-2">
+              <hr className="flex-grow border-gray-200" />
+              <span className="px-2">or</span>
+              <hr className="flex-grow border-gray-200" />
+            </div>
+            
+            <button 
+              type="button" 
+              className="w-full py-2 border border-gray-300 text-sm rounded text-gray-700 hover:bg-gray-50 transition-colors flex items-center justify-center"
+            >
+              <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+              </svg>
+              Continue with Google
+            </button>
+          </div>
+          
+          <p className="text-xs text-center text-gray-500 mt-4">
+            Already have an account? <Link to="/signin" className="text-black font-medium hover:underline">Sign in</Link>
           </p>
         </div>
-      </div>
-
-      {/* Right Side: Tilted Article Preview */}
-      <div className="hidden md:flex justify-center items-center p-8">
-        <motion.div
-          initial={{ rotate: -5, opacity: 0 }}
-          animate={{ rotate: -3, opacity: 1 }}
-          transition={{ type: "spring", stiffness: 100 }}
-          whileHover={{ rotate: 0, scale: 1.02 }}
-          className="shadow-lg max-w-xs"
-        >
-          <svg
-            viewBox="0 0 300 400"
-            width="300"
-            height="400"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            {/* Card Background */}
-            <rect width="300" height="400" fill="#ffffff" rx="8" />
-
-            {/* Header */}
-            <rect x="0" y="0" width="300" height="80" fill="#000" rx="8" />
-            <text
-              x="20"
-              y="30"
-              fontSize="12"
-              fontFamily="serif"
-              fill="#999"
-              fontWeight="light"
-            >
-              LUXURY LIVING
-            </text>
-            <text
-              x="20"
-              y="55"
-              fontSize="16"
-              fontFamily="serif"
-              fill="#fff"
-              fontWeight="bold"
-            >
-              THE ART OF MODERN SPACES
-            </text>
-
-            {/* Divider Line */}
-            <line
-              x1="20"
-              y1="100"
-              x2="280"
-              y2="100"
-              stroke="#eee"
-              strokeWidth="1"
-            />
-
-            {/* Article Content */}
-            <text x="20" y="130" fontSize="14" fill="#333" fontWeight="bold">
-              Minimalism Redefined
-            </text>
-
-            <text x="20" y="155" fontSize="12" fill="#666">
-              Exploring the delicate balance between
-            </text>
-            <text x="20" y="175" fontSize="12" fill="#666">
-              simplicity and sophistication in design.
-            </text>
-
-            {/* Abstract Architectural Illustration */}
-            <g transform="translate(150, 250)">
-              {/* Building elements */}
-              <rect x="-80" y="-50" width="40" height="100" fill="#000" />
-              <rect x="-30" y="-70" width="60" height="120" fill="#f5f5f5" stroke="#000" strokeWidth="1" />
-              <rect x="40" y="-40" width="40" height="90" fill="#000" />
-
-              {/* Lines representing framework */}
-              <line x1="-80" y1="-20" x2="80" y2="-20" stroke="#000" strokeWidth="1" />
-              <line x1="-60" y1="0" x2="60" y2="0" stroke="#000" strokeWidth="1" />
-              <line x1="-70" y1="20" x2="70" y2="20" stroke="#000" strokeWidth="1" />
-
-              {/* Circular element */}
-              <circle cx="0" cy="-40" r="15" stroke="#000" strokeWidth="1" fill="none" />
-            </g>
-
-            {/* Read More Link */}
-            <text x="20" y="370" fontSize="12" fill="#000" fontWeight="medium">
-              Read More →
-            </text>
-          </svg>
-        </motion.div>
       </div>
     </div>
   );

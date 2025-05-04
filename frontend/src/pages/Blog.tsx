@@ -1,10 +1,12 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { Link, useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { BACKEND_URL } from "../config";
 import { ArrowLeft, Loader2, Save } from "lucide-react";
 import { Editor } from "../components/Editor";
-import { Link } from "react-router-dom";
+import cacheService from "../cacheService";
+import { ToastContainer } from "../components/ui/Toast";
+import { sleep } from "../utils";
 
 interface Blog {
   id: string;
@@ -15,7 +17,7 @@ interface Blog {
   publishedAt?: string;
   published: boolean;
   updatedAt: string;
-  content: string,
+  content: string;
   author: {
     id: string;
     name?: string;
@@ -42,26 +44,65 @@ export default function Blog() {
   useEffect(() => {
     if (slug) {
       fetchBlog(slug);
-    } else {
-      // new post
-      setIsAuthor(true);
-      setEditMode(true);
-      setIsLoading(false);
     }
   }, [slug]);
+
+
+
 
   const fetchBlog = async (slug: string) => {
     try {
       setIsLoading(true);
       setError(null);
-      const token = localStorage.getItem("token");
+      const token = localStorage.getItem('token');
+
+      if (slug === 'i-still-miss-her') {
+
+        const cachedBlog = await cacheService.getRecentlyEditedBlog();
+        if (cachedBlog) {
+          setBlog(cachedBlog);
+          setTitle(cachedBlog.title);
+          setContent(cachedBlog.content);
+          setExcerpt(cachedBlog.excerpt || "");
+          setPublished(cachedBlog.published);
+        }
+
+        setIsAuthor(true);
+        setEditMode(true);
+
+        setIsLoading(false);
+        return;
+
+      }
+
+      const cachedBlog = await cacheService.getRecentlyOpenedBlog(slug);
+
+      if (cachedBlog) {
+
+        setBlog(cachedBlog);
+        setTitle(cachedBlog.title);
+        setContent(cachedBlog.content);
+        setExcerpt(cachedBlog.excerpt || "");
+        setPublished(cachedBlog.published);
+
+        const userId = localStorage.getItem('userId');
+        const isOwner = userId === cachedBlog.author.id;
+
+        setIsAuthor(isOwner);
+        setEditMode(isOwner && !cachedBlog.published);
+        setIsLoading(false);
+        return;
+
+      }
 
       try {
-        const response = await axios.get(`http://localhost:8787/api/v1/blog/${slug}`, {
+        const res = await axios.get(`${BACKEND_URL}/blog/${slug}`, {
           headers: token ? { Authorization: token } : undefined
         });
-        const blogData = response.data.blog;
-        const isOwner = response.data.isAuthor || false;
+
+        const blogData = res.data.blog;
+        const userId = localStorage.getItem('userId');
+        const isOwner = blogData.author.id === userId;
 
         setBlog(blogData);
         setTitle(blogData.title);
@@ -70,37 +111,40 @@ export default function Blog() {
         setPublished(blogData.published);
         setIsAuthor(isOwner);
         setEditMode(isOwner && !blogData.published);
-      } catch (err: any) {
-        if (err.response?.status === 404) {
 
-          if (slug != "i-still-miss-her") {
-            navigate("/not-found");
-          }
-          else {
-            setIsAuthor(true);
-            setEditMode(true);
-          }
-
-        } else {
-          console.error("Error fetching blog:", err);
+        await cacheService.cacheRecentlyOpenedBlog(blogData);
+      }
+      catch (e: any) {
+        if (e.response.status === 404) {
+          navigate("/not-found");
+        }
+        else {
+          console.error("Error fetching blog:", e);
           setError("Failed to load blog post. Please try again later.");
         }
+
       }
-    } finally {
+
+    }
+    catch (e) {
+      console.log("error while showing you blog: ", e);
+    }
+    finally {
       setIsLoading(false);
     }
-  };
+  }
 
-  const handleEditorChange = (value: string) => {
-    setContent(value);
-  };
-
-  const handleSave = async (publishStatus?: boolean) => {
+  const handleSave = async (publishStatus: boolean) => {
     try {
       setIsSaving(true);
       const token = localStorage.getItem("token");
 
       if (!token) {
+
+
+        window.toast.error("Sign In please");
+        await sleep(2000);
+
         navigate("/signin");
         return;
       }
@@ -108,47 +152,110 @@ export default function Blog() {
       const blogData = {
         title,
         content,
-        excerpt: excerpt || generateExcerpt(),
-        published: publishStatus !== undefined ? publishStatus : published
+        excerpt: generateExcerpt(),
+        published: publishStatus
       };
 
       let response;
 
       if (blog?.id) {
-        response = await axios.put(
-          `${BACKEND_URL}/blog`,
-          { ...blogData, id: blog.id },
+        response = await axios.put(`${BACKEND_URL}/blog`,{ ...blogData, id: blog.id },
           { headers: { Authorization: token } }
         );
+        window.toast.success("sucessfully published");
       } else {
-        // create new
-        response = await axios.post(
-          `${BACKEND_URL}/blog`,
-          blogData,
+
+        response = await axios.post(`${BACKEND_URL}/blog`, blogData,
           { headers: { Authorization: token } }
         );
 
-        if (response.data.blog) {
-          navigate(`/${response.data.blog.slug}`);
-        }
+        window.toast.success("in draft, success");
       }
 
-      if (response.data.blog && publishStatus !== undefined) {
-        setPublished(publishStatus);
-      }
+      await cacheService.cacheRecentlyOpenedBlog(response.data.blog);
+      navigate(`/${response.data.blog.slug}`);
 
+
+      setPublished(publishStatus);
       setBlog(response.data.blog);
 
-      // set to non editing mode
       if (publishStatus === true) {
         setEditMode(false);
       }
+
+      if (slug === "i-still-miss-her") {    // restricting only for "i-still-miss-her"
+
+        const emptyBlog: Blog = {
+          id: '',
+          slug: "i-still-miss-her",
+          title: '',
+          content: JSON.stringify([{ type: "paragraph", content: "" }]),
+          published: false,
+          updatedAt: new Date().toISOString(),
+          author: {
+            id: '',
+            username: ''
+          }
+        };
+        await cacheService.cacheRecentlyEditedBlog(emptyBlog);
+
+      }
+
+
     } catch (error) {
       console.error("Error saving blog:", error);
     } finally {
       setIsSaving(false);
     }
   };
+
+
+  const handleEditorChange = (value: string) => {
+    setContent(value);
+
+    if (slug === 'i-still-miss-her') {
+
+      const editingBlog: Blog = {
+        id: blog?.id || '',
+        slug: 'i-still-miss-her',
+        title,
+        excerpt,
+        content: value,
+        published: false,
+        updatedAt: new Date().toISOString(),
+        author: {
+          id: '',
+          username: ''
+        }
+      };
+      cacheService.cacheRecentlyEditedBlog(editingBlog);
+
+    }
+  };
+
+  const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setTitle(e.target.value);
+
+    if (slug === "i-still-miss-her") {
+      const currentDraft: Blog = {
+        id: blog?.id || '',
+        slug: "i-still-miss-her",
+        title: e.target.value,
+        excerpt: excerpt,
+        content,
+        published: false,
+        updatedAt: new Date().toISOString(),
+        author: {
+          id: '',
+          username: ''
+        }
+      };
+      cacheService.cacheRecentlyEditedBlog(currentDraft);
+    }
+
+
+  };
+
 
   const generateExcerpt = () => {
     try {
@@ -174,6 +281,8 @@ export default function Blog() {
   };
 
 
+
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -197,14 +306,16 @@ export default function Blog() {
   }
 
 
+
+
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white font-serif">
       {/* Header */}
       <header className="border-b border-gray-100 bg-white sticky top-0 z-10 py-4">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center">
             <div className="flex items-center">
-              <Link to="/dashboard" className="text-gray-500 hover:text-gray-700">
+              <Link to="/" className="text-gray-500 hover:text-gray-700">
                 <ArrowLeft className="w-5 h-5" />
               </Link>
               <span className="ml-4 font-medium text-gray-500">
@@ -255,7 +366,7 @@ export default function Blog() {
             <input
               type="text"
               value={title}
-              onChange={(e) => setTitle(e.target.value)}
+              onChange={handleTitleChange}
               placeholder="Title"
               className="text-4xl font-bold w-full outline-none border-none mb-8 focus:ring-0 placeholder-gray-300"
             />
@@ -304,6 +415,8 @@ export default function Blog() {
           </>
         )}
       </main>
+
+      <ToastContainer />
     </div>
   );
 }

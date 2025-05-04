@@ -1,7 +1,6 @@
 import { Hono } from 'hono'
 import { PrismaClient } from '../../prisma/app/generated/prisma/client/edge';
 import { withAccelerate } from '@prisma/extension-accelerate';
-import { verify } from 'hono/jwt';
 import { z } from 'zod';
 import slugify from 'slugify';
 import { createPostSchema, updatePostSchema } from '@gopiyadav989/unpolished';
@@ -24,6 +23,8 @@ export const jwtPayloadSchema = z.object({
     email: z.string()
 });
 
+
+
 blogRouter.post("/", authMiddleware, async (c) => {
 
     const user = c.get("user");
@@ -31,8 +32,6 @@ blogRouter.post("/", authMiddleware, async (c) => {
     const prisma = new PrismaClient({
         datasourceUrl: c.env.DATABASE_URL,
     }).$extends(withAccelerate());
-
-
 
     try {
 
@@ -57,6 +56,16 @@ blogRouter.post("/", authMiddleware, async (c) => {
                 authorId: user.id,
                 publishedAt: published ? new Date() : null
             },
+            include: {
+                author: {
+                    select: {
+                        id: true,
+                        name: true,
+                        username: true,
+                        profileImage: true
+                    }
+                }
+            }
         });
 
         return c.json({
@@ -97,7 +106,7 @@ blogRouter.put('/', authMiddleware, async (c) => {
             where: {
                 id,
                 authorId: user.id
-            },
+            }
         });
 
         if (!existingBlog) {
@@ -117,6 +126,16 @@ blogRouter.put('/', authMiddleware, async (c) => {
                 ...data,
                 publishedAt,
                 updatedAt: new Date()
+            },
+            include: {
+                author: {
+                    select: {
+                        id: true,
+                        name: true,
+                        username: true,
+                        profileImage: true
+                    }
+                }
             }
         })
 
@@ -241,7 +260,6 @@ blogRouter.get('/:slug', semiAuthMiddleware, async (c) => {
             }
         });
 
-
         if (!blog || (!blog.published && (!currentUser || currentUser.id !== blog.authorId)) ) {
             return c.json({ error: "Blog not found" }, 404);
         }
@@ -284,7 +302,6 @@ blogRouter.delete('/:slug', authMiddleware, async (c) => {
             return c.json({ error: "Blog not found or you don't have permission to delete it" }, 404);
         }
 
-        // Delete post
         await prisma.blog.delete({
             where: { slug }
         });

@@ -54,7 +54,8 @@ authRouter.post('/signup', async (c) => {
                 id: user.id,
                 emai: user.email,
                 username: user.username,
-                name: user.name
+                name: user.name,
+                profileImage: user.profileImage
             },
             token
         }, 201);
@@ -107,7 +108,8 @@ authRouter.post('/signin', async (c) => {
                 id: user.id,
                 email: user.email,
                 username: user.username,
-                name: user.name
+                name: user.name,
+                profileImage: user.profileImage
             },
             token
         }, 201);

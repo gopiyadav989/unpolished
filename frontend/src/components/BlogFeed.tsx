@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback} from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Search, BookOpen } from 'lucide-react';
 import BlogCard from './BlogCard';
 import axios from 'axios';
@@ -152,7 +152,7 @@ export function BlogFeed({ initialBlogs = [] }: BlogFeedProps) {
           <p className="text-gray-700 font-medium">{error}</p>
           <button
             onClick={handleRetry}
-            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors"
+            className="mt-4 px-4 py-2 bg-black text-white rounded-full"
           >
             Try Again
           </button>

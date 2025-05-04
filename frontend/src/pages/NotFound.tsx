@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { Header } from "../components/Header";
 
 export function NotFound() {
+
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
