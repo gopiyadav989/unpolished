@@ -1,8 +1,9 @@
 import { Hono } from 'hono'
-import { PrismaClient } from '../../prisma/app/generated/prisma/client/edge';
+import { PrismaClient } from '@prisma/client/edge';
 import { withAccelerate } from '@prisma/extension-accelerate'
 import { sign } from 'hono/jwt'
-import { signinInput, signupInput, jwtPayloadSchema } from '@gopiyadav989/unpolished';
+import { signinInput, signupInput } from '@gopiyadav989/unpolished';
+import * as bcrypt from 'bcryptjs';
 
 
 
@@ -21,38 +22,60 @@ authRouter.post('/signup', async (c) => {
 
     try {
 
-        const body =  await c.req.json();
+        const body = await c.req.json();
         const validation = signupInput.safeParse(body);
 
-        if(!validation.success){
+        if (!validation.success) {
             return c.json({ error: "invalid input data", details: validation.error.errors }, 400);
         }
 
         const { email, username, password, name } = validation.data;
 
+        const existingUser = await prisma.user.findFirst({
+            where: {
+                OR: [
+                    { email },
+                    { username }
+                ]
+            }
+        });
+
+        if (existingUser) {
+            const field = existingUser.email === email ? 'email' : 'username';
+            return c.json({ error: `User with this ${field} already exists` }, 409);
+        }
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+
         const user = await prisma.user.create({
             data: {
                 email,
                 username,
-                hashedPassword: password,
                 name,
+                hashedPassword
+            },
+            select: {
+                id: true,
+                email: true,
+                username: true,
+                name: true,
+                profileImage: true
             }
-        })
+        });
 
-        const token = await sign(
-            jwtPayloadSchema.parse({
-                id: user.id,
-                username: user.username,
-                email: user.email
-            }),
-            c.env.JWT_SECRET
-        );
+        const jwtPayload = {
+            id: user.id,
+            username: user.username,
+            email: user.email
+        };
+
+        const token = await sign(jwtPayload, c.env.JWT_SECRET);
 
         return c.json({
-            message: "signed up successfull",
+            message: "User registered successfully",
             user: {
                 id: user.id,
-                emai: user.email,
+                email: user.email,
                 username: user.username,
                 name: user.name,
                 profileImage: user.profileImage
@@ -87,23 +110,32 @@ authRouter.post('/signin', async (c) => {
 
         const user = await prisma.user.findUnique({
             where: { email }
-        })
+        });
 
-        if (!user || user.hashedPassword != password ) {
-            return c.json({ message: "wrong credentials" }, 401);
+        if (!user) {
+            return c.json({ error: "Invalid credentials" }, 401);
         }
 
-        const token = await sign(
-            {
-                id: user.id,
-                username: user.username,
-                email: user.email
-            },
-            c.env.JWT_SECRET
-        );
+        const isPasswordValid = await bcrypt.compare(password, user.hashedPassword);
+        if (!isPasswordValid) {
+            return c.json({ error: "Invalid credentials" }, 401);
+        }
+
+        await prisma.user.update({
+            where: { id: user.id },
+            data: { lastLoginAt: new Date() }
+        });
+
+        const jwtPayload = {
+            id: user.id,
+            username: user.username,
+            email: user.email
+        };
+
+        const token = await sign(jwtPayload, c.env.JWT_SECRET);
 
         return c.json({
-            message: 'signin successful',
+            message: 'Sign in successful',
             user: {
                 id: user.id,
                 email: user.email,
@@ -112,7 +144,7 @@ authRouter.post('/signin', async (c) => {
                 profileImage: user.profileImage
             },
             token
-        }, 201);
+        }, 200);
     }
     catch (e) {
         console.log(e);

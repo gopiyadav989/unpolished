@@ -1,5 +1,4 @@
 import { Hono } from 'hono'
-import { PrismaClient } from '../prisma/app/generated/prisma/client/edge';
 import { cors } from 'hono/cors'
 
 import { authRouter } from './routes/authRouter';

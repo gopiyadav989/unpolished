@@ -1,5 +1,5 @@
 import { Hono } from 'hono'
-import { PrismaClient } from '../../prisma/app/generated/prisma/client/edge';
+import { PrismaClient } from '@prisma/client/edge';
 import { withAccelerate } from '@prisma/extension-accelerate';
 import { z } from 'zod';
 import slugify from 'slugify';
