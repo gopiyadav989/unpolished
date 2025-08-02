@@ -107,18 +107,19 @@ authRouter.post('/signin', async (c) => {
         }
 
         const { email, password } = validation.data;
+        console.log(email, password);
 
         const user = await prisma.user.findUnique({
             where: { email }
         });
 
         if (!user) {
-            return c.json({ error: "Invalid credentials" }, 401);
+            return c.json({ error: "Invalid credentials1" }, 401);
         }
 
         const isPasswordValid = await bcrypt.compare(password, user.hashedPassword);
         if (!isPasswordValid) {
-            return c.json({ error: "Invalid credentials" }, 401);
+            return c.json({ error: "Invalid credentials2" }, 401);
         }
 
         await prisma.user.update({

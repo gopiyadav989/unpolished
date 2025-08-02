@@ -146,7 +146,7 @@ export default function Blog() {
 
       try {
         const res = await axios.get(`${BACKEND_URL}/blog/${slug}`, {
-          headers: token ? { Authorization: token } : undefined
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined
         });
 
         const blogData = res.data.blog;
@@ -191,10 +191,10 @@ export default function Blog() {
 
   const handleSave = async (publishStatus: boolean) => {
 
-    console.log(blog);
     try {
       setIsSaving(true);
       const token = localStorage.getItem("token");
+      console.log(token)
 
       if (!token) {
 
@@ -222,17 +222,17 @@ export default function Blog() {
 
       let response;
 
-      console.log(blogData)
+      console.log(blogData);
 
       if (blog?.id) {
         response = await axios.put(`${BACKEND_URL}/blog`, { ...blogData, id: blog.id },
-          { headers: { Authorization: token } }
+          { headers: { Authorization: `Bearer ${token}` } }
         );
         window.toast.success("sucessfully published");
       } else {
 
         response = await axios.post(`${BACKEND_URL}/blog`, blogData,
-          { headers: { Authorization: token } }
+          { headers: { Authorization: `Bearer ${token}` } }
         );
 
         window.toast.success("in draft, success");
