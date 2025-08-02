@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+
+// login/signup
 export const signupInput = z.object({
     email: z.string().email(),
     username: z.string().min(3).max(20),
@@ -18,7 +20,10 @@ export const jwtPayloadSchema = z.object({
     email: z.string()
 });
 
-// Blog status enum to match database schema
+
+
+
+//blog
 export const BlogStatus = z.enum(['DRAFT', 'PUBLISHED', 'ARCHIVED', 'SCHEDULED']);
 
 export const createPostSchema = z.object({
@@ -34,17 +39,11 @@ export const createPostSchema = z.object({
     readingTime: z.number().optional()
 });
 
-export const updateProfileSchema = z.object({
-    name: z.string().optional(),
-    bio: z.string().optional(),
-    profileImage: z.string().optional()
-});
-
 export const updatePostSchema = createPostSchema.partial().extend({
     id: z.string().uuid()
 });
 
-// Additional schemas for future features
+
 export const createCategorySchema = z.object({
     name: z.string().min(1).max(50),
     description: z.string().optional(),
@@ -57,12 +56,42 @@ export const createTagSchema = z.object({
     color: z.string().regex(/^#[0-9A-F]{6}$/i).optional()
 });
 
-// Enhanced blog schema with SEO fields
 export const createPostWithSEOSchema = createPostSchema.extend({
     metaTitle: z.string().max(60).optional(),
     metaDescription: z.string().max(160).optional(),
     scheduledFor: z.string().datetime().optional()
 });
+
+
+
+
+// Comment schemas
+export const CommentStatus = z.enum(['PENDING', 'APPROVED', 'REJECTED', 'SPAM']);
+
+export const createCommentSchema = z.object({
+    content: z.string().min(1).max(1000),
+    parentId: z.string().uuid().optional()
+});
+
+export const updateCommentSchema = z.object({
+    content: z.string().min(1).max(1000)
+});
+
+
+
+
+
+// userprofile
+export const updateProfileSchema = z.object({
+    name: z.string().optional(),
+    bio: z.string().optional(),
+    profileImage: z.string().optional()
+});
+
+
+
+
+
 
 export type SignupInput = z.infer<typeof signupInput>
 export type SigninInput = z.infer<typeof signinInput>
@@ -74,3 +103,6 @@ export type UpdatePostSchema = z.infer<typeof updatePostSchema>
 export type CreateCategorySchema = z.infer<typeof createCategorySchema>
 export type CreateTagSchema = z.infer<typeof createTagSchema>
 export type CreatePostWithSEOSchema = z.infer<typeof createPostWithSEOSchema>
+export type CommentStatusType = z.infer<typeof CommentStatus>
+export type CreateCommentSchema = z.infer<typeof createCommentSchema>
+export type UpdateCommentSchema = z.infer<typeof updateCommentSchema>

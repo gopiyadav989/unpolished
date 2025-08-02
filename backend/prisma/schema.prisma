@@ -1,363 +1,361 @@
 generator client {
-  provider = "prisma-client-js"
+    provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+    provider = "postgresql"
+    url      = env("DATABASE_URL")
 }
 
 enum UserStatus {
-  ACTIVE
-  SUSPENDED
-  DEACTIVATED
-  PENDING_VERIFICATION
+    ACTIVE
+    SUSPENDED
+    DEACTIVATED
+    PENDING_VERIFICATION
 }
 
 enum BlogStatus {
-  DRAFT
-  PUBLISHED
-  ARCHIVED
-  SCHEDULED
+    DRAFT
+    PUBLISHED
+    ARCHIVED
+    SCHEDULED
 }
 
 enum CommentStatus {
-  PENDING
-  APPROVED
-  REJECTED
-  SPAM
+    PENDING
+    APPROVED
+    REJECTED
+    SPAM
 }
 
 enum NotificationType {
-  LIKE
-  COMMENT
-  FOLLOW
-  BLOG_PUBLISHED
-  MENTION
-  SYSTEM
+    LIKE
+    COMMENT
+    FOLLOW
+    BLOG_PUBLISHED
+    MENTION
+    SYSTEM
 }
 
 // Main Models
 model User {
-  id             String     @id @default(uuid())
-  email          String     @unique
-  username       String     @unique
-  hashedPassword String
-  name           String?
-  firstName      String?
-  lastName       String?
-  bio            String?    @db.Text
-  profileImage   String?
-  coverImage     String?
-  website        String?
-  location       String?
-  dateOfBirth    DateTime?
-  
-  // User settings
-  status         UserStatus @default(ACTIVE)
-  isAuthor       Boolean    @default(false)
-  
-  // Social links
-  twitterHandle  String?
-  linkedinUrl    String?
-  githubUrl      String?
-  instagramUrl   String?
-  
-  // Preferences
-  emailNotifications Boolean @default(true)
-  pushNotifications  Boolean @default(true)
+    id             String    @id @default(uuid())
+    email          String    @unique
+    username       String    @unique
+    hashedPassword String
+    name           String?
+    firstName      String?
+    lastName       String?
+    bio            String?   @db.Text
+    profileImage   String?
+    coverImage     String?
+    website        String?
+    location       String?
+    dateOfBirth    DateTime?
 
-  // Timestamps
-  createdAt      DateTime   @default(now())
-  updatedAt      DateTime   @updatedAt
-  lastLoginAt    DateTime?
-  emailVerifiedAt DateTime?
-  
-  // Relationships
-  blogs          Blog[]
-  comments       Comment[]
-  blogLikes BlogLike[]
-  commentLikes CommentLike[]
-  bookmarks      Bookmark[]
-  followers      Follow[]   @relation("UserFollowers")
-  following      Follow[]   @relation("UserFollowing")
-  notifications  Notification[]
-  
-  // Author specific
-  authorProfile  AuthorProfile?
-  
-  @@index([isAuthor])
-  @@index([status])
-  @@index([createdAt])
+    // User settings
+    status   UserStatus @default(ACTIVE)
+    isAuthor Boolean    @default(false)
+
+    // Social links
+    twitterHandle String?
+    linkedinUrl   String?
+    githubUrl     String?
+    instagramUrl  String?
+
+    // Preferences
+    emailNotifications Boolean @default(true)
+    pushNotifications  Boolean @default(true)
+
+    // Timestamps
+    createdAt       DateTime  @default(now())
+    updatedAt       DateTime  @updatedAt
+    lastLoginAt     DateTime?
+    emailVerifiedAt DateTime?
+
+    // Relationships
+    blogs         Blog[]
+    comments      Comment[]
+    blogLikes     BlogLike[]
+    commentLikes  CommentLike[]
+    bookmarks     Bookmark[]
+    followers     Follow[]       @relation("UserFollowers")
+    following     Follow[]       @relation("UserFollowing")
+    notifications Notification[]
+
+    // Author specific
+    authorProfile AuthorProfile?
+
+    @@index([isAuthor])
+    @@index([status])
+    @@index([createdAt])
 }
 
 model AuthorProfile {
-  id          String   @id @default(uuid())
-  userId      String   @unique
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  // Author specific fields
-  tagline     String?
-  expertise   String[] // Array of expertise areas
-  
-  // Stats
-  totalViews     Int @default(0)
-  totalLikes     Int @default(0)
-  totalFollowers Int @default(0)
-  
-  // Settings
-  showEmail      Boolean @default(false)
-  
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+    id     String @id @default(uuid())
+    userId String @unique
+    user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    // Author specific fields
+    tagline   String?
+    expertise String[] // Array of expertise areas
+
+    // Stats
+    totalViews     Int @default(0)
+    totalLikes     Int @default(0)
+    totalFollowers Int @default(0)
+
+    // Settings
+    showEmail Boolean @default(false)
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
 }
 
 model Blog {
-  id            String     @id @default(uuid())
-  slug          String     @unique
-  title         String
-  content       Json
-  excerpt       String?    @db.Text
-  featuredImage String?
-  
-  // SEO fields
-  metaTitle     String?
-  metaDescription String?
-  
-  // Status and publishing
-  status        BlogStatus @default(DRAFT)
-  publishedAt   DateTime?
-  scheduledFor  DateTime?
-  
-  // Engagement stats
-  viewCount     Int        @default(0)
-  likeCount     Int        @default(0)
-  commentCount  Int        @default(0)
-  bookmarkCount Int        @default(0)
-  shareCount    Int        @default(0)
-  
-  // Reading time in minutes
-  readingTime   Int?
-  
-  // Content settings
-  allowComments Boolean    @default(true)
-  isPremium     Boolean    @default(false)
-  
-  // Timestamps
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
-  
-  // Relationships
-  authorId      String
-  author        User       @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  
-  blogCategories  BlogCategory[]
-  tags          BlogTag[]
-  comments      Comment[]
-  blogLikes         BlogLike[]
-  bookmarks     Bookmark[]
-  
-  @@index([authorId])
-  @@index([status])
-  @@index([slug])
-  @@index([createdAt])
-  @@index([publishedAt])
+    id            String  @id @default(uuid())
+    slug          String  @unique
+    title         String
+    content       Json
+    excerpt       String? @db.Text
+    featuredImage String?
+
+    // SEO fields
+    metaTitle       String?
+    metaDescription String?
+
+    // Status and publishing
+    status       BlogStatus @default(DRAFT)
+    publishedAt  DateTime?
+    scheduledFor DateTime?
+
+    // Engagement stats
+    viewCount     Int @default(0)
+    likeCount     Int @default(0)
+    commentCount  Int @default(0)
+    bookmarkCount Int @default(0)
+    shareCount    Int @default(0)
+
+    // Reading time in minutes
+    readingTime Int?
+
+    // Content settings
+    allowComments Boolean @default(true)
+    isPremium     Boolean @default(false)
+
+    // Timestamps
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    // Relationships
+    authorId String
+    author   User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+    blogCategories BlogCategory[]
+    tags           BlogTag[]
+    comments       Comment[]
+    blogLikes      BlogLike[]
+    bookmarks      Bookmark[]
+
+    @@index([authorId])
+    @@index([status])
+    @@index([slug])
+    @@index([createdAt])
+    @@index([publishedAt])
 }
 
 model Category {
-  id          String   @id @default(uuid())
-  name        String   @unique
-  slug        String   @unique
-  description String?  @db.Text
-  color       String?  // Hex color code
-  icon        String?  // Icon name or URL
-  
-  // Hierarchy support
-  parentId    String?
-  parent      Category? @relation("CategoryHierarchy", fields: [parentId], references: [id])
-  children    Category[] @relation("CategoryHierarchy")
-  
-  // Stats
-  blogCount   Int      @default(0)
-  
-  // Settings
-  isActive    Boolean  @default(true)
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  // Relationships
-  blogCategories BlogCategory[]
-  
-  @@index([slug])
-  @@index([parentId])
+    id          String  @id @default(uuid())
+    name        String  @unique
+    slug        String  @unique
+    description String? @db.Text
+    color       String? // Hex color code
+    icon        String? // Icon name or URL
+
+    // Hierarchy support
+    parentId String?
+    parent   Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
+    children Category[] @relation("CategoryHierarchy")
+
+    // Stats
+    blogCount Int @default(0)
+
+    // Settings
+    isActive Boolean @default(true)
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    // Relationships
+    blogCategories BlogCategory[]
+
+    @@index([slug])
+    @@index([parentId])
 }
 
 model BlogCategory {
-  blogId     String
-  categoryId String
+    blogId     String
+    categoryId String
 
-  blog       Blog     @relation(fields: [blogId], references: [id], onDelete: Cascade)
-  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+    blog     Blog     @relation(fields: [blogId], references: [id], onDelete: Cascade)
+    category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
 
-  @@id([blogId, categoryId])
+    @@id([blogId, categoryId])
 }
 
 model Tag {
-  id        String    @id @default(uuid())
-  name      String    @unique
-  slug      String    @unique
-  color     String?   // Hex color code
-  
-  // Stats
-  blogCount Int       @default(0)
-  
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  
-  // Relationships
-  blogs     BlogTag[]
-  
-  @@index([slug])
-  @@index([name])
+    id    String  @id @default(uuid())
+    name  String  @unique
+    slug  String  @unique
+    color String? // Hex color code
+
+    // Stats
+    blogCount Int @default(0)
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    // Relationships
+    blogs BlogTag[]
+
+    @@index([slug])
+    @@index([name])
 }
 
 model BlogTag {
-  id     String @id @default(uuid())
-  blogId String
-  tagId  String
-  
-  blog   Blog   @relation(fields: [blogId], references: [id], onDelete: Cascade)
-  tag    Tag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
-  
-  @@unique([blogId, tagId])
-  @@index([blogId])
-  @@index([tagId])
+    id     String @id @default(uuid())
+    blogId String
+    tagId  String
+
+    blog Blog @relation(fields: [blogId], references: [id], onDelete: Cascade)
+    tag  Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+    @@unique([blogId, tagId])
+    @@index([blogId])
+    @@index([tagId])
 }
 
 model Comment {
-  id        String        @id @default(uuid())
-  content   String        @db.Text
-  status    CommentStatus @default(APPROVED)
-  
-  // Hierarchy support for replies
-  parentId  String?
-  parent    Comment?      @relation("CommentReplies", fields: [parentId], references: [id])
-  replies   Comment[]     @relation("CommentReplies")
-  
-  // Stats
-  likeCount Int           @default(0)
-  
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
-  
-  // Relationships
-  blogId    String
-  blog      Blog          @relation(fields: [blogId], references: [id], onDelete: Cascade)
-  
-  userId    String
-  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  commentLikes     CommentLike[]
-  
-  @@index([blogId])
-  @@index([userId])
-  @@index([parentId])
-  @@index([status])
-  @@index([createdAt])
+    id      String        @id @default(uuid())
+    content String        @db.Text
+    status  CommentStatus @default(APPROVED)
+
+    // Hierarchy support for replies
+    parentId String?
+    parent   Comment?  @relation("CommentReplies", fields: [parentId], references: [id])
+    replies  Comment[] @relation("CommentReplies")
+
+    // Stats
+    likeCount Int @default(0)
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    // Relationships
+    blogId String
+    blog   Blog   @relation(fields: [blogId], references: [id], onDelete: Cascade)
+
+    userId String
+    user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    commentLikes CommentLike[]
+
+    @@index([blogId])
+    @@index([userId])
+    @@index([parentId])
+    @@index([status])
+    @@index([createdAt])
 }
 
 model BlogLike {
-  id       String   @id @default(uuid())
-  
-  userId   String
-  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  blogId   String
-  blog     Blog     @relation(fields: [blogId], references: [id], onDelete: Cascade)
-  
-  createdAt DateTime @default(now())
-  
-  @@unique([userId, blogId])
-  @@index([userId])
-  @@index([blogId])
+    id String @id @default(uuid())
+
+    userId String
+    user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    blogId String
+    blog   Blog   @relation(fields: [blogId], references: [id], onDelete: Cascade)
+
+    createdAt DateTime @default(now())
+
+    @@unique([userId, blogId])
+    @@index([userId])
+    @@index([blogId])
 }
 
 model CommentLike {
-  id        String   @id @default(uuid())
-  
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  commentId String
-  comment   Comment  @relation(fields: [commentId], references: [id], onDelete: Cascade)
-  
-  createdAt DateTime @default(now())
-  
-  @@unique([userId, commentId])
-  @@index([userId])
-  @@index([commentId])
+    id String @id @default(uuid())
+
+    userId String
+    user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    commentId String
+    comment   Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+
+    createdAt DateTime @default(now())
+
+    @@unique([userId, commentId])
+    @@index([userId])
+    @@index([commentId])
 }
 
 model Bookmark {
-  id       String   @id @default(uuid())
-  
-  userId   String
-  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  blogId   String
-  blog     Blog     @relation(fields: [blogId], references: [id], onDelete: Cascade)
-  
-  createdAt DateTime @default(now())
-  
-  @@unique([userId, blogId])
-  @@index([userId])
-  @@index([blogId])
+    id String @id @default(uuid())
+
+    userId String
+    user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    blogId String
+    blog   Blog   @relation(fields: [blogId], references: [id], onDelete: Cascade)
+
+    createdAt DateTime @default(now())
+
+    @@unique([userId, blogId])
+    @@index([userId])
+    @@index([blogId])
 }
 
 model Follow {
-  id          String   @id @default(uuid())
-  
-  followerId  String
-  follower    User     @relation("UserFollowing", fields: [followerId], references: [id], onDelete: Cascade)
-  
-  followingId String
-  following   User     @relation("UserFollowers", fields: [followingId], references: [id], onDelete: Cascade)
-  
-  createdAt   DateTime @default(now())
-  
-  @@unique([followerId, followingId])
-  @@index([followerId])
-  @@index([followingId])
-}
+    id String @id @default(uuid())
 
+    followerId String
+    follower   User   @relation("UserFollowing", fields: [followerId], references: [id], onDelete: Cascade)
+
+    followingId String
+    following   User   @relation("UserFollowers", fields: [followingId], references: [id], onDelete: Cascade)
+
+    createdAt DateTime @default(now())
+
+    @@unique([followerId, followingId])
+    @@index([followerId])
+    @@index([followingId])
+}
 
 model Notification {
-  id        String           @id @default(uuid())
-  type      NotificationType
-  title     String
-  message   String           @db.Text
-  
-  // Optional links
-  actionUrl String?
-  
-  // Status
-  isRead    Boolean          @default(false)
-  
-  createdAt DateTime         @default(now())
-  readAt    DateTime?
-  
-  // Relationships
-  userId    String
-  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  // Optional references
-  blogId    String?
-  commentId String?
-  
-  @@index([userId])
-  @@index([isRead])
-  @@index([createdAt])
-  @@index([type])
-}
+    id      String           @id @default(uuid())
+    type    NotificationType
+    title   String
+    message String           @db.Text
 
+    // Optional links
+    actionUrl String?
+
+    // Status
+    isRead Boolean @default(false)
+
+    createdAt DateTime  @default(now())
+    readAt    DateTime?
+
+    // Relationships
+    userId String
+    user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    // Optional references
+    blogId    String?
+    commentId String?
+
+    @@index([userId])
+    @@index([isRead])
+    @@index([createdAt])
+    @@index([type])
+}
