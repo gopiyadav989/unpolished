@@ -3,7 +3,7 @@ import { PrismaClient } from '@prisma/client/edge';
 import { withAccelerate } from '@prisma/extension-accelerate';
 import { z } from 'zod';
 import slugify from 'slugify';
-import { createPostSchema, updatePostSchema } from '@gopiyadav989/unpolished';
+import { createPostSchema, updatePostSchema, JwtPayloadSchema } from "../../../common/src/index"
 
 import { authMiddleware, semiAuthMiddleware } from '../middlewares/autMiddleware';
 
@@ -13,15 +13,10 @@ export const blogRouter = new Hono<{
         JWT_SECRET: string;
     },
     Variables: {
-        user: z.infer<typeof jwtPayloadSchema>
+        user: JwtPayloadSchema
     }
 }>();
 
-export const jwtPayloadSchema = z.object({
-    id: z.string(),
-    username: z.string(),
-    email: z.string()
-});
 
 const paginationSchema = z.object({
     page: z.coerce.number().int().positive().default(1),
@@ -47,8 +42,11 @@ blogRouter.post("/", authMiddleware, async (c) => {
             return c.json({ error: "invalid input data", details: validation.error.errors }, 400);
         }
 
-        const { title, content, excerpt, featuredImage, published = false } = validation.data;
+        const { title, content, excerpt, featuredImage, metaTitle, metaDescription, isPremium, allowComments, status, readingTime } = validation.data;
+
         const slug = slugify(title, { lower: true, strict: true }) + '-' + Date.now();
+        const finalMetaTitle = metaTitle ?? title.slice(0, 150);
+        const finalMetaDescription = metaDescription ?? (excerpt  ?? title.slice(0, 150));
 
         const blog = await prisma.blog.create({
             data: {
@@ -56,10 +54,15 @@ blogRouter.post("/", authMiddleware, async (c) => {
                 content,
                 excerpt,
                 featuredImage,
-                published,
+                status,
                 slug,
                 authorId: user.id,
-                publishedAt: published ? new Date() : null
+                publishedAt: status === 'PUBLISHED' ? new Date() : null,
+                metaTitle: finalMetaTitle,
+                metaDescription: finalMetaDescription,
+                isPremium,
+                allowComments,
+                readingTime
             },
             include: {
                 author: {
@@ -119,8 +122,10 @@ blogRouter.put('/', authMiddleware, async (c) => {
         }
 
         let publishedAt = existingBlog.publishedAt;
-        if (data.published === true && !existingBlog.published) {
+        if (data.status === 'PUBLISHED' && existingBlog.status !== 'PUBLISHED') {
             publishedAt = new Date();
+        } else if (data.status && data.status !== 'PUBLISHED') {
+            publishedAt = null;
         }
 
         const updatedBlog = await prisma.blog.update({
@@ -179,12 +184,12 @@ blogRouter.get('/bulk', async (c) => {
         const [totalCount, blogs] = await Promise.all([
             prisma.blog.count({
                 where: {
-                    published: true
+                    status: 'PUBLISHED'
                 }
             }),
             prisma.blog.findMany({
                 where: {
-                    published: true
+                    status: 'PUBLISHED'
                 },
                 skip,
                 take: limit,
@@ -335,7 +340,7 @@ blogRouter.get('/:slug', semiAuthMiddleware, async (c) => {
         if (!blog) {
             return c.json({ error: "Not found" }, 404);
         }
-        if (!blog.published && (!user || user.id !== blog.authorId)) {
+        if (blog.status !== 'PUBLISHED' && (!user || user.id !== blog.authorId)) {
             return c.json({ error: "Forbidden" }, 403);
         }
 

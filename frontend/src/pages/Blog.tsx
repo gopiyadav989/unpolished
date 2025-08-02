@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
-import axios from "axios";
-import { BACKEND_URL } from "../config";
 import { ArrowLeft, Loader2, Save } from "lucide-react";
 import { Editor } from "../components/Editor";
 import cacheService from "../cacheService";
 import { ToastContainer } from "../components/ui/Toast";
 import { sleep } from "../utils";
+import { generateExcerpt, calculateReadingTime } from "../utils/index";
+import { BACKEND_URL } from "../config";
+import axios from "axios";
 
 interface Blog {
   id: string;
@@ -14,10 +15,35 @@ interface Blog {
   title: string;
   excerpt?: string;
   featuredImage?: string;
-  publishedAt?: string;
-  published: boolean;
-  updatedAt: string;
   content: string;
+
+  // SEO fields
+  metaTitle?: string;
+  metaDescription?: string;
+
+  // Status and publishing
+  status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED' | 'SCHEDULED';
+  publishedAt?: string;
+  scheduledFor?: string;
+
+  // Engagement stats
+  viewCount: number;
+  likeCount: number;
+  commentCount: number;
+  bookmarkCount: number;
+  shareCount: number;
+
+  // Reading time in minutes
+  readingTime?: number;
+
+  // Content settings
+  allowComments: boolean;
+  isPremium: boolean;
+
+  // Timestamps
+  createdAt: string;
+  updatedAt: string;
+
   author: {
     id: string;
     name?: string;
@@ -34,10 +60,21 @@ export default function Blog() {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState(JSON.stringify([{ type: "paragraph", content: "" }]));
   const [excerpt, setExcerpt] = useState("");
+
+  const [metaTitle, setMetaTitle] = useState("");
+  const [metaDescription, setMetaDescription] = useState("");
+
+  const [scheduledFor, setScheduledFor] = useState("");
+
+  const [featuredImage, setFeaturedImage] = useState("");
+  const [allowComments, setAllowComments] = useState(true);
+  const [isPremium, setIsPremium] = useState(false);
+
+  // UI state
   const [isAuthor, setIsAuthor] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [published, setPublished] = useState(false);
+  const [status, setStatus] = useState<'DRAFT' | 'PUBLISHED' | 'ARCHIVED' | 'SCHEDULED'>('DRAFT');
   const [editMode, setEditMode] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -64,7 +101,13 @@ export default function Blog() {
           setTitle(cachedBlog.title);
           setContent(cachedBlog.content);
           setExcerpt(cachedBlog.excerpt || "");
-          setPublished(cachedBlog.published);
+          setFeaturedImage(cachedBlog.featuredImage || "");
+          setMetaTitle(cachedBlog.metaTitle || "");
+          setMetaDescription(cachedBlog.metaDescription || "");
+          setScheduledFor(cachedBlog.scheduledFor || "");
+          setAllowComments(cachedBlog.allowComments ?? true);
+          setIsPremium(cachedBlog.isPremium ?? false);
+          setStatus(cachedBlog.status);
         }
 
         setIsAuthor(true);
@@ -83,13 +126,19 @@ export default function Blog() {
         setTitle(cachedBlog.title);
         setContent(cachedBlog.content);
         setExcerpt(cachedBlog.excerpt || "");
-        setPublished(cachedBlog.published);
+        setFeaturedImage(cachedBlog.featuredImage || "");
+        setMetaTitle(cachedBlog.metaTitle || "");
+        setMetaDescription(cachedBlog.metaDescription || "");
+        setScheduledFor(cachedBlog.scheduledFor || "");
+        setAllowComments(cachedBlog.allowComments ?? true);
+        setIsPremium(cachedBlog.isPremium ?? false);
+        setStatus(cachedBlog.status);
 
         const userId = localStorage.getItem('userId');
         const isOwner = userId === cachedBlog.author.id;
 
         setIsAuthor(isOwner);
-        setEditMode(isOwner && !cachedBlog.published);
+        setEditMode(isOwner && cachedBlog.status === 'DRAFT');
         setIsLoading(false);
         return;
 
@@ -108,9 +157,15 @@ export default function Blog() {
         setTitle(blogData.title);
         setContent(blogData.content);
         setExcerpt(blogData.excerpt || "");
-        setPublished(blogData.published);
+        setFeaturedImage(blogData.featuredImage || "");
+        setMetaTitle(blogData.metaTitle || "");
+        setMetaDescription(blogData.metaDescription || "");
+        setScheduledFor(blogData.scheduledFor || "");
+        setAllowComments(blogData.allowComments ?? true);
+        setIsPremium(blogData.isPremium ?? false);
+        setStatus(blogData.status);
         setIsAuthor(isOwner);
-        setEditMode(isOwner && !blogData.published);
+        setEditMode(isOwner && blogData.status === 'DRAFT');
 
         await cacheService.cacheRecentlyOpenedBlog(blogData);
       }
@@ -154,8 +209,15 @@ export default function Blog() {
       const blogData = {
         title,
         content,
-        excerpt: generateExcerpt(),
-        published: publishStatus
+        excerpt: excerpt || generateExcerpt(content),
+        featuredImage: featuredImage || undefined,
+        metaTitle: metaTitle || undefined,
+        metaDescription: metaDescription || undefined,
+        scheduledFor: scheduledFor || undefined,
+        allowComments,
+        isPremium,
+        readingTime: calculateReadingTime(content),
+        status: publishStatus ? 'PUBLISHED' : 'DRAFT'
       };
 
       let response;
@@ -163,7 +225,7 @@ export default function Blog() {
       console.log(blogData)
 
       if (blog?.id) {
-        response = await axios.put(`${BACKEND_URL}/blog`,{ ...blogData, id: blog.id },
+        response = await axios.put(`${BACKEND_URL}/blog`, { ...blogData, id: blog.id },
           { headers: { Authorization: token } }
         );
         window.toast.success("sucessfully published");
@@ -180,7 +242,7 @@ export default function Blog() {
       navigate(`/${response.data.blog.slug}`);
 
 
-      setPublished(publishStatus);
+      setStatus(publishStatus ? 'PUBLISHED' : 'DRAFT');
       setBlog(response.data.blog);
 
       if (publishStatus === true) {
@@ -194,7 +256,22 @@ export default function Blog() {
           slug: "i-still-miss-her",
           title: '',
           content: JSON.stringify([{ type: "paragraph", content: "" }]),
-          published: false,
+          excerpt: '',
+          featuredImage: '',
+          metaTitle: '',
+          metaDescription: '',
+          status: 'DRAFT',
+          publishedAt: undefined,
+          scheduledFor: undefined,
+          viewCount: 0,
+          likeCount: 0,
+          commentCount: 0,
+          bookmarkCount: 0,
+          shareCount: 0,
+          readingTime: 1,
+          allowComments: true,
+          isPremium: false,
+          createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
           author: {
             id: '',
@@ -225,7 +302,21 @@ export default function Blog() {
         title,
         excerpt,
         content: value,
-        published: false,
+        featuredImage: featuredImage || '',
+        metaTitle: metaTitle || '',
+        metaDescription: metaDescription || '',
+        status: 'DRAFT',
+        publishedAt: undefined,
+        scheduledFor: scheduledFor || undefined,
+        viewCount: 0,
+        likeCount: 0,
+        commentCount: 0,
+        bookmarkCount: 0,
+        shareCount: 0,
+        readingTime: calculateReadingTime(value),
+        allowComments,
+        isPremium,
+        createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         author: {
           id: '',
@@ -247,7 +338,21 @@ export default function Blog() {
         title: e.target.value,
         excerpt: excerpt,
         content,
-        published: false,
+        featuredImage: featuredImage || '',
+        metaTitle: metaTitle || '',
+        metaDescription: metaDescription || '',
+        status: 'DRAFT',
+        publishedAt: undefined,
+        scheduledFor: scheduledFor || undefined,
+        viewCount: 0,
+        likeCount: 0,
+        commentCount: 0,
+        bookmarkCount: 0,
+        shareCount: 0,
+        readingTime: calculateReadingTime(content),
+        allowComments,
+        isPremium,
+        createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         author: {
           id: '',
@@ -259,33 +364,6 @@ export default function Blog() {
 
 
   };
-
-
-  const generateExcerpt = () => {
-    try {
-      const parsedContent = JSON.parse(content);
-      let textContent = "";
-
-      for (const block of parsedContent) {
-        if (typeof block.content === "string") {
-          textContent += block.content + " ";
-        } else if (Array.isArray(block.content)) {
-          for (const item of block.content) {
-            if (item.text) textContent += item.text + " ";
-          }
-        }
-        if (textContent.length > 150) break;
-      }
-
-      return textContent.trim().substring(0, 150) + (textContent.length > 150 ? "..." : "");
-    } catch (err) {
-      console.error("Excerpt generation error:", err);
-      return "";
-    }
-  };
-
-
-
 
   if (isLoading) {
     return (
@@ -318,6 +396,7 @@ export default function Blog() {
       <header className="border-b border-gray-100 bg-white sticky top-0 z-10 py-4">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center">
+
             <div className="flex items-center">
               <Link to="/" className="text-gray-500 hover:text-gray-700">
                 <ArrowLeft className="w-5 h-5" />
@@ -351,12 +430,13 @@ export default function Blog() {
                       disabled={isSaving}
                       className="px-4 py-2 rounded-full text-sm bg-black text-white hover:bg-gray-800 flex items-center"
                     >
-                      {isSaving ? <Loader2 className="w-10 h-5 mr-1.5 animate-spin" /> : published ? "Update" : "Publish"}
+                      {isSaving ? <Loader2 className="w-10 h-5 mr-1.5 animate-spin" /> : status === 'PUBLISHED' ? "Update" : "Publish"}
                     </button>
                   </>
                 )}
               </div>
             )}
+
           </div>
         </div>
       </header>
@@ -404,7 +484,7 @@ export default function Blog() {
                       year: 'numeric'
                     })}
                     {blog.publishedAt && blog.updatedAt && blog.publishedAt !== blog.updatedAt && " (updated)"}
-                    {' · '}{Math.ceil(content.length / 500)} min read
+                    {' · '}{blog.readingTime || calculateReadingTime(content)} min read
                   </p>
                 </div>
               </div>

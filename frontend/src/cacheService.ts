@@ -7,10 +7,35 @@ export interface Blog {
     title: string;
     excerpt?: string;
     featuredImage?: string;
-    publishedAt?: string;
-    published: boolean;
-    updatedAt: string;
     content: string;
+    
+    // SEO fields
+    metaTitle?: string;
+    metaDescription?: string;
+    
+    // Status and publishing
+    status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED' | 'SCHEDULED';
+    publishedAt?: string;
+    scheduledFor?: string;
+    
+    // Engagement stats
+    viewCount: number;
+    likeCount: number;
+    commentCount: number;
+    bookmarkCount: number;
+    shareCount: number;
+    
+    // Reading time in minutes
+    readingTime?: number;
+    
+    // Content settings
+    allowComments: boolean;
+    isPremium: boolean;
+    
+    // Timestamps
+    createdAt: string;
+    updatedAt: string;
+    
     author: {
         id: string;
         name?: string;

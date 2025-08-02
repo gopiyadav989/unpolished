@@ -1,11 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Search, BookOpen, ChevronRight, ChevronLeft } from 'lucide-react';
 import BlogCard from './BlogCard';
-import axios from 'axios';
-import { BACKEND_URL } from '../config';
 import { InterestBar } from './InterestBar';
 import cacheService from '../cacheService';
 import { ToastContainer } from './ui/Toast';
+import { semiAuthenticatedGet } from '../utils/api';
 
 interface Blog {
   id: string;
@@ -13,10 +12,35 @@ interface Blog {
   title: string;
   excerpt?: string;
   featuredImage?: string;
+  content: string;
+  
+  // SEO fields
+  metaTitle?: string;
+  metaDescription?: string;
+  
+  // Status and publishing
+  status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED' | 'SCHEDULED';
   publishedAt?: string;
-  published: boolean;
+  scheduledFor?: string;
+  
+  // Engagement stats
+  viewCount: number;
+  likeCount: number;
+  commentCount: number;
+  bookmarkCount: number;
+  shareCount: number;
+  
+  // Reading time in minutes
+  readingTime?: number;
+  
+  // Content settings
+  allowComments: boolean;
+  isPremium: boolean;
+  
+  // Timestamps
+  createdAt: string;
   updatedAt: string;
-  content: string,
+  
   author: {
     id: string;
     name?: string;
@@ -62,15 +86,12 @@ export function BlogFeed({ initialBlogs = [] }: BlogFeedProps) {
       setIsLoading(true);
       setError(null);
 
-      const token = localStorage.getItem("token");
-
-      const res = await axios.get(`${BACKEND_URL}/blog/bulk`, {
+      const res = await semiAuthenticatedGet(`/blog/bulk`, {
         params: {
           interest: interest !== 'For You' ? interest : undefined,
           page,
           limit: pagination.limit
-        },
-        headers: token ? { Authorization: token } : {}
+        }
       });
 
       const data = res.data;

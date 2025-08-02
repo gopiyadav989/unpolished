@@ -45,7 +45,7 @@ userRouter.get("/:username", async (c) => {
                 profileImage: true,
                 createdAt: true,
                 blogs: {
-                    where: { published: true },
+                    where: { status: 'PUBLISHED' },
                     orderBy: { publishedAt: 'desc' },
                     select: {
                         id: true,
@@ -62,6 +62,11 @@ userRouter.get("/:username", async (c) => {
         if (!user) {
             return c.json({ error: "User not found" }, 404);
         }
+
+        return c.json({
+            message: "User found successfully",
+            user
+        }, 200);
 
     }
     catch (e) {
