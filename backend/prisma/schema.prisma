@@ -242,7 +242,7 @@ model Comment {
 
     // Hierarchy support for replies
     parentId String?
-    parent   Comment?  @relation("CommentReplies", fields: [parentId], references: [id])
+    parent   Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
     replies  Comment[] @relation("CommentReplies")
 
     // Stats

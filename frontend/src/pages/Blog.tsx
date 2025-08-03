@@ -8,6 +8,7 @@ import { sleep } from "../utils";
 import { generateExcerpt, calculateReadingTime } from "../utils/index";
 import { BACKEND_URL } from "../config";
 import axios from "axios";
+import { CommentsSection } from "../components/comments/CommentsSection";
 
 interface Blog {
   id: string;
@@ -148,6 +149,8 @@ export default function Blog() {
         const res = await axios.get(`${BACKEND_URL}/blog/${slug}`, {
           headers: token ? { Authorization: `Bearer ${token}` } : undefined
         });
+
+        console.log(res);
 
         const blogData = res.data.blog;
         const userId = localStorage.getItem('userId');
@@ -495,6 +498,16 @@ export default function Blog() {
               onChange={() => { }}
               editable={false}
             />
+
+            {/* Comments Section - only show in read mode */}
+            {blog && (
+              <CommentsSection
+                blogId={blog.id}
+                blogAuthorId={blog.author.id}
+                allowComments={blog.allowComments}
+                initialCommentCount={blog.commentCount}
+              />
+            )}
           </>
         )}
       </main>

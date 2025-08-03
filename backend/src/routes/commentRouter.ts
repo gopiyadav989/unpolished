@@ -147,7 +147,7 @@ commentRouter.get('/:blogId', semiAuthMiddleware, async (c) => {
 
 
 // POST /api/v1/comments/:blogId - Create a new comment
-commentRouter.post('/blog/:blogId/comments', authMiddleware, async (c) => {
+commentRouter.post('/:blogId', authMiddleware, async (c) => {
     const prisma = new PrismaClient({
         datasourceUrl: c.env.DATABASE_URL,
     }).$extends(withAccelerate());
@@ -265,7 +265,7 @@ commentRouter.post('/blog/:blogId/comments', authMiddleware, async (c) => {
 
 
 // DELETE /api/v1/comments/:commentId - Delete a comment
-commentRouter.delete('/comments/:commentId', authMiddleware, async (c) => {
+commentRouter.delete('/:commentId', authMiddleware, async (c) => {
     const prisma = new PrismaClient({
         datasourceUrl: c.env.DATABASE_URL,
     }).$extends(withAccelerate());
@@ -309,9 +309,11 @@ commentRouter.delete('/comments/:commentId', authMiddleware, async (c) => {
         });
 
         // Delete the comment (CASCADE will delete all replies)
-        await prisma.comment.delete({
+        const res = await prisma.comment.delete({
             where: { id: commentId }
         });
+
+        console.log(res);
 
         // Update blog comment count (subtract 1 for the comment + reply count)
         await prisma.blog.update({
@@ -336,7 +338,7 @@ commentRouter.delete('/comments/:commentId', authMiddleware, async (c) => {
 
 
 // PUT /api/v1/comments/:commentId 
-commentRouter.put('/comments/:commentId', authMiddleware, async (c) => {
+commentRouter.put('/:commentId', authMiddleware, async (c) => {
     const prisma = new PrismaClient({
         datasourceUrl: c.env.DATABASE_URL,
     }).$extends(withAccelerate());

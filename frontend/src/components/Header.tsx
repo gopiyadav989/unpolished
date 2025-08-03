@@ -2,22 +2,37 @@ import { LogOut, PencilLine, Search, User } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import cacheService from "../cacheService";
+import { div } from "framer-motion/client";
 
 
 export function Header() {
-
 	const [searchQuery, setSearchQuery] = useState("");
 	const [showUserMenu, setShowUserMenu] = useState(false);
 	const userMenuRef = useRef<HTMLDivElement | null>(null);
 	const [imageUrl, setImageUrl] = useState<string | null>(null);
 	const userButtonRef = useRef<HTMLButtonElement | null>(null);
 	const [userId, setUserId] = useState<null | string>(null);
+	const [username, setUsername] = useState<null | string>(null);
 
 
 	useEffect(() => {
-		setImageUrl(localStorage.getItem('profileImage'))
-		setUserId(localStorage.getItem('userId'))
-	}, [imageUrl])
+
+		const storedImageUrl = localStorage.getItem('profileImage');
+		const storedUserId = localStorage.getItem('userId');
+		const storedUsername = localStorage.getItem('username');
+
+
+		if (storedImageUrl && storedImageUrl !== 'null') {
+			setImageUrl(storedImageUrl);
+		} else {
+			setImageUrl(null);
+		}
+
+		setUserId(storedUserId);
+		setUsername(storedUsername);
+
+
+	}, [])
 
 
 	useEffect(() => {
@@ -47,11 +62,16 @@ export function Header() {
 	const handleSignout = () => {
 		localStorage.clear();
 		cacheService.clearCache();
+
 		setImageUrl(null);
+		setUserId(null);
+		setUsername(null);
+
 		localStorage.removeItem('token');
 		window.dispatchEvent(new Event('logout'));
 		setShowUserMenu(false);
 	}
+
 
 	return (
 		<header>
@@ -60,7 +80,7 @@ export function Header() {
 				<div className="flex items-center justify-between">
 					<Link to={"/"} className="text-3xl font-bold mr-8">U.</Link>
 
-					{/* Search bar */}
+					{/* Search bar for desktop */}
 					<div className="hidden md:block w-64 lg:w-80">
 						<SearchBar value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
 					</div>
@@ -69,50 +89,78 @@ export function Header() {
 				{/* User actions */}
 				<div className="flex items-center gap-4">
 					<Link
-						to="/i-still-miss-her"
-						className="flex items-center gap-1 px-3 py-1.5 text-sm rounded-full border border-gray-300 hover:bg-gray-50 transition-colors"
+						to="i-still-miss-her"
+						className="flex items-center gap-2 px-4 py-2 text-sm rounded-full border border-gray-300 hover:bg-gray-100 transition-colors no-underline text-gray-700"
 					>
 						<PencilLine size={16} />
 						<span className="hidden md:inline">Write</span>
 					</Link>
 
-					<div className="relative">
-						<button
-							ref={userButtonRef}
-							className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center hover:bg-gray-300 transition-colors"
-							onClick={() => setShowUserMenu(!showUserMenu)}
-							aria-label="User menu"
-							aria-expanded={showUserMenu}
-							aria-controls="user-menu"
-						>
-							{!imageUrl ? <User size={18} className="text-gray-700" /> : <img src={imageUrl} alt="User avatar" className="w-8 h-8 rounded-full object-cover" />}
-						</button>
+					{/* If user is logged in, show avatar and menu. */}
+					{userId ? (
+						<div className="relative">
+							<button
+								ref={userButtonRef}
+								className="w-9 h-9 rounded-full bg-gray-200 flex items-center justify-center hover:bg-gray-300 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+								onClick={() => setShowUserMenu(!showUserMenu)}
+								aria-label="User menu"
+								aria-expanded={showUserMenu}
+								aria-controls="user-menu"
+							>
+								{!imageUrl ? (
+									<User size={18} className="text-gray-700" />
+								) : (
+									<img
+										src={imageUrl}
+										alt="User avatar"
+										className="w-full h-full rounded-full object-cover"
+									/>
+								)}
+							</button>
 
-						{showUserMenu && (
-							<div ref={userMenuRef} id={"user-menu"} className={"absolute right-0 mt-2 w-32 bg-white rounded-md shadow-lg py-1 z-30 border border-gray-100"}>
-								<Link to="/profile" className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
-									<User size={16} />
-									Profile
-								</Link>
-								{/* <Link to="/settings" className={"flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"}>
-									<Settings size={16} />
-									Settings
-								</Link> */}
-								{userId ? (
-									<button onClick={handleSignout} className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+							{showUserMenu && (
+								<div ref={userMenuRef} id={"user-menu"} className={"absolute right-0 mt-2 w-56 bg-white rounded-md shadow-lg py-1 z-30 border border-gray-100"}>
+									{username && (
+										<div className="px-4 py-3 border-b border-gray-100">
+											<p className="text-sm font-medium text-gray-900 truncate">@{username}</p>
+										</div>
+									)}
+									<Link
+										to={`/profile/${username}`}
+										className="flex w-full items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 no-underline"
+										onClick={() => setShowUserMenu(false)}
+									>
+										<User size={16} />
+										View Profile
+									</Link>
+									<Link
+										to="/dashboard"
+										className="flex w-full items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 no-underline"
+										onClick={() => setShowUserMenu(false)}
+									>
+										<PencilLine size={16} />
+										Dashboard
+									</Link>
+									<div className="border-t border-gray-100 my-1"></div>
+									<button
+										onClick={handleSignout}
+										className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm hover:bg-red-50"
+									>
 										<LogOut size={16} />
 										Sign out
 									</button>
-								) : (
-									<Link to="/signin" className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
-										<User size={16} />
-										Sign in
-									</Link>
-								)}
-
-							</div>
-						)}
-					</div>
+								</div>
+							)}
+						</div>
+					) : (
+						// user is not logged in -> show Sign In button.
+						<Link
+							to="/signin"
+							className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-gray-800 rounded-full hover:bg-gray-700 transition-colors no-underline"
+						>
+							Sign In
+						</Link>
+					)}
 				</div>
 			</div>
 
