@@ -83,9 +83,16 @@ export const updateCommentSchema = z.object({
 
 // userprofile
 export const updateProfileSchema = z.object({
-    name: z.string().optional(),
-    bio: z.string().optional(),
-    profileImage: z.string().optional()
+    name: z.string().max(100).optional(),
+    bio: z.string().max(500).optional(),
+    profileImage: z.string().url().optional(),
+    coverImage: z.string().url().optional(),
+    website: z.string().url().optional(),
+    location: z.string().max(100).optional(),
+    twitterHandle: z.string().max(50).optional(),
+    linkedinUrl: z.string().url().optional(),
+    githubUrl: z.string().url().optional(),
+    instagramUrl: z.string().url().optional()
 });
 
 

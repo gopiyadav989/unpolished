@@ -2,7 +2,6 @@ import { LogOut, PencilLine, Search, User } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import cacheService from "../cacheService";
-import { div } from "framer-motion/client";
 
 
 export function Header() {
