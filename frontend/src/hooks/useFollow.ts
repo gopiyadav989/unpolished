@@ -1,22 +1,28 @@
 // hooks/useFollow.ts
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { BACKEND_URL } from '../config';
 
-export function useFollow(profileId?: string) {
-  const [isFollowing, setIsFollowing] = useState(false);
+export function useFollow(profileId?: string, initialIsFollowing?: boolean) {
+  const [isFollowing, setIsFollowing] = useState<boolean | undefined>(undefined);
   const [followLoading, setFollowLoading] = useState(false);
+
+  useEffect(()=> {
+    if(initialIsFollowing !== undefined){
+      setIsFollowing(initialIsFollowing);
+    }
+  }, [initialIsFollowing]);
 
   const handleFollow = async () => {
     if (!profileId) return;
 
     const currentUserId = localStorage.getItem('userId');
     if (!currentUserId) {
-      // Navigate to signin
-      return;
+      return; // Navigate to signin
     }
 
     try {
+
       setFollowLoading(true);
       const token = localStorage.getItem('token');
 
@@ -25,21 +31,20 @@ export function useFollow(profileId?: string) {
           headers: { Authorization: `Bearer ${token}` }
         });
         setIsFollowing(false);
-        // Show success toast
+
       } else {
         await axios.post(`${BACKEND_URL}/profile/${profileId}/follow`, {}, {
           headers: { Authorization: `Bearer ${token}` }
         });
         setIsFollowing(true);
-        // Show success toast
       }
     } catch (error: any) {
       console.error('Error following/unfollowing:', error);
-      // Show error toast
+
     } finally {
       setFollowLoading(false);
     }
   };
 
-  return { isFollowing, followLoading, handleFollow, setIsFollowing };
+  return { isFollowing, followLoading, handleFollow };
 }

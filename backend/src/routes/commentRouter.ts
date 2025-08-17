@@ -2,7 +2,7 @@ import { Hono } from 'hono'
 import { PrismaClient } from '@prisma/client/edge';
 import { withAccelerate } from '@prisma/extension-accelerate';
 import { z } from 'zod';
-import { createCommentSchema, updateCommentSchema, JwtPayloadSchema } from "../../../common/src/index"
+import { createCommentSchema, updateCommentSchema, JwtPayloadSchema } from "@gopiyadav989/unpolished"
 import { authMiddleware, semiAuthMiddleware } from '../middlewares/autMiddleware';
 import { CommentStatus } from '@prisma/client';
 

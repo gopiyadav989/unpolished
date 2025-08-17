@@ -4,7 +4,8 @@ import BlogCard from './BlogCard';
 import { InterestBar } from './InterestBar';
 import cacheService from '../cacheService';
 import { ToastContainer } from './ui/Toast';
-import { semiAuthenticatedGet } from '../utils/api';
+import axios from 'axios';
+import { BACKEND_URL } from '../config';
 
 interface Blog {
   id: string;
@@ -86,12 +87,17 @@ export function BlogFeed({ initialBlogs = [] }: BlogFeedProps) {
       setIsLoading(true);
       setError(null);
 
-      const res = await semiAuthenticatedGet(`/blog/bulk`, {
+      const token = localStorage.getItem("token");
+
+      const res = await axios.get(`${BACKEND_URL}/blog/bulk`, {
         params: {
-          interest: interest !== 'For You' ? interest : undefined,
+          interest: interest !== "For You" ? interest : undefined,
           page,
-          limit: pagination.limit
-        }
+          limit: pagination.limit,
+        },
+        headers: {
+          ...(token && { Authorization: `Bearer ${token}` }),
+        },
       });
 
       const data = res.data;

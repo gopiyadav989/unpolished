@@ -14,7 +14,7 @@
     "@blocknote/core": "^0.29.1",
     "@blocknote/mantine": "^0.29.1",
     "@blocknote/react": "^0.29.1",
-    "@gopiyadav989/unpolished": "^1.0.2",
+    "@gopiyadav989/unpolished": "^1.2.1",
     "@tailwindcss/vite": "^4.1.4",
     "axios": "^1.9.0",
     "framer-motion": "^12.9.2",

@@ -1,6 +1,6 @@
 // components/Profile/PersonalActivity.tsx
 import { useState, useEffect } from 'react';
-import { Heart, MessageCircle, Bookmark, Edit, Clock, ExternalLink } from 'lucide-react';
+import { Heart, MessageCircle, Bookmark, Edit, Clock } from 'lucide-react';
 import axios from 'axios';
 import { BACKEND_URL } from '../../config';
 
@@ -18,6 +18,7 @@ interface ActivityItem {
   createdAt: string;
   updatedAt?: string;
   status?: string;
+  slug: string;
   blog?: {
     id: string;
     title: string;
@@ -34,6 +35,8 @@ export function PersonalActivity({ type, userId, onNavigate }: PersonalActivityP
   const [items, setItems] = useState<ActivityItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  console.log(items)
 
   useEffect(() => {
     fetchPersonalActivity();
@@ -63,7 +66,6 @@ export function PersonalActivity({ type, userId, onNavigate }: PersonalActivityP
       }
       
       // API Call: GET /api/v1/profile/activity/{type}
-      // Expected Response: { items: ActivityItem[] }
       const response = await axios.get(`${BACKEND_URL}${endpoint}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -107,7 +109,7 @@ export function PersonalActivity({ type, userId, onNavigate }: PersonalActivityP
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-12">
+      <div className="flex items-center justify-center min-h-[400px]">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600"></div>
       </div>
     );
@@ -115,7 +117,7 @@ export function PersonalActivity({ type, userId, onNavigate }: PersonalActivityP
 
   if (error) {
     return (
-      <div className="text-center py-12">
+      <div className="text-center flex items-center justify-center min-h-[400px]">
         <p className="text-red-600">{error}</p>
       </div>
     );
@@ -176,10 +178,10 @@ export function PersonalActivity({ type, userId, onNavigate }: PersonalActivityP
                       <span>{formatDate(item.createdAt)}</span>
                     </div>
                   </div>
-                  <ExternalLink className="w-4 h-4 text-gray-400 ml-4" />
                 </div>
               </div>
             ) : (
+              
               // Article layout (drafts, bookmarks, liked)
               <div className="flex gap-4">
                 {item.featuredImage && (
@@ -199,7 +201,7 @@ export function PersonalActivity({ type, userId, onNavigate }: PersonalActivityP
                         className="font-medium text-gray-900 hover:text-teal-600 cursor-pointer mb-1 line-clamp-2"
                         onClick={() => {
                           if (type === 'drafts') {
-                            onNavigate(`/write/${item.id}`); // Edit draft
+                            onNavigate(`/${item?.slug}`); // Edit draft
                           } else {
                             onNavigate(`/${item.blog?.slug || item.id}`); // View article
                           }
@@ -237,7 +239,6 @@ export function PersonalActivity({ type, userId, onNavigate }: PersonalActivityP
                       </div>
                     </div>
                     
-                    <ExternalLink className="w-4 h-4 text-gray-400 ml-4 flex-shrink-0" />
                   </div>
                 </div>
               </div>

@@ -4,8 +4,8 @@ import Signin from "./pages/Signin"
 import Home from "./pages/Home"
 import Blog from "./pages/Blog"
 import { NotFound } from "./pages/NotFound"
-import Profile from "./components/profile/Profile"
-import Dashboard from "./pages/Dashboard"
+import Profile from "./pages/Profile"
+
 function App() {
 
   return (
@@ -16,7 +16,7 @@ function App() {
         <Route path="/signup" element={<Signup/>}/>
         <Route path="/signin" element={<Signin/>}/>
         <Route path="/not-found" element={<NotFound/>} />
-        <Route path="/dashboard" element={<Dashboard/>}/>
+
         <Route path="/profile/:username" element={<Profile/>}/>
         <Route path='/:slug' element={<Blog/>} />
       </Routes>

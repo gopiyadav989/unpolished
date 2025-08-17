@@ -132,14 +132,7 @@ export function Header() {
 										<User size={16} />
 										View Profile
 									</Link>
-									<Link
-										to="/dashboard"
-										className="flex w-full items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 no-underline"
-										onClick={() => setShowUserMenu(false)}
-									>
-										<PencilLine size={16} />
-										Dashboard
-									</Link>
+
 									<div className="border-t border-gray-100 my-1"></div>
 									<button
 										onClick={handleSignout}

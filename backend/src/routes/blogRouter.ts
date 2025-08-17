@@ -3,7 +3,7 @@ import { PrismaClient } from '@prisma/client/edge';
 import { withAccelerate } from '@prisma/extension-accelerate';
 import { z } from 'zod';
 import slugify from 'slugify';
-import { createPostSchema, updatePostSchema, JwtPayloadSchema } from "../../../common/src/index"
+import { createPostSchema, updatePostSchema, JwtPayloadSchema } from "@gopiyadav989/unpolished"
 
 import { authMiddleware, semiAuthMiddleware } from '../middlewares/autMiddleware';
 
@@ -47,6 +47,34 @@ blogRouter.post("/", authMiddleware, async (c) => {
         const slug = slugify(title, { lower: true, strict: true }) + '-' + Date.now();
         const finalMetaTitle = metaTitle ?? title.slice(0, 150);
         const finalMetaDescription = metaDescription ?? (excerpt  ?? title.slice(0, 150));
+
+        // If this is the user's first published blog, make them an author and create author profile
+        if (status === 'PUBLISHED') {
+            const userRecord = await prisma.user.findUnique({
+                where: { id: user.id },
+                select: { isAuthor: true }
+            });
+
+            if (!userRecord?.isAuthor) {
+                // Update user to be an author
+                await prisma.user.update({
+                    where: { id: user.id },
+                    data: { isAuthor: true }
+                });
+
+                // Create author profile if it doesn't exist
+                await prisma.authorProfile.upsert({
+                    where: { userId: user.id },
+                    update: {}, // Don't update if exists
+                    create: {
+                        userId: user.id,
+                        tagline: null,
+                        expertise: [],
+                        showEmail: false
+                    }
+                });
+            }
+        }
 
         const blog = await prisma.blog.create({
             data: {
@@ -124,6 +152,32 @@ blogRouter.put('/', authMiddleware, async (c) => {
         let publishedAt = existingBlog.publishedAt;
         if (data.status === 'PUBLISHED' && existingBlog.status !== 'PUBLISHED') {
             publishedAt = new Date();
+            
+            // If this is the user's first published blog, make them an author and create author profile
+            const userRecord = await prisma.user.findUnique({
+                where: { id: user.id },
+                select: { isAuthor: true }
+            });
+
+            if (!userRecord?.isAuthor) {
+                // Update user to be an author
+                await prisma.user.update({
+                    where: { id: user.id },
+                    data: { isAuthor: true }
+                });
+
+                // Create author profile if it doesn't exist
+                await prisma.authorProfile.upsert({
+                    where: { userId: user.id },
+                    update: {}, // Don't update if exists
+                    create: {
+                        userId: user.id,
+                        tagline: null,
+                        expertise: [],
+                        showEmail: false
+                    }
+                });
+            }
         } else if (data.status && data.status !== 'PUBLISHED') {
             publishedAt = null;
         }

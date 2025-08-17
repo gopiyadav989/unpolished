@@ -1,6 +1,6 @@
 // components/Profile/ArticleGrid.tsx
 import { ArticleCard } from './ArticleCard';
-import { UserProfile } from './Profile';
+import { UserProfile } from '../../types/profile';
 
 interface ArticleGridProps {
   articles: UserProfile['recentBlogs'];
@@ -61,7 +61,7 @@ export function ArticleGrid({
         )}
       </div>
       
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">
         {articles.map((article) => (
           <ArticleCard
             key={article.id}
